@@ -1,0 +1,208 @@
+<div class="aip-backdrop" [class.visible]="isOpen" (click)="closePanel.emit()"></div>
+
+<aside class="aip-panel" [class.open]="isOpen" [class.comparison-mode]="isComparisonMode">
+
+  <!-- Header -->
+  <div class="aip-header">
+    <div class="aip-header-left">
+      <span class="aip-logo">{{isComparisonMode ? '⚖️' : '🤖'}}</span>
+      <div>
+        <div class="aip-title">{{isComparisonMode ? 'Comparador IA' : 'Analista IA'}}</div>
+        <div class="aip-subtitle" *ngIf="!isComparisonMode && symbol">
+          {{ symbol }} · {{ chartContext?.timeframe || 'Todo' }}
+        </div>
+        <div class="aip-subtitle comparison-badge" *ngIf="isComparisonMode">
+          Comparando {{comparisonStocks.length + 1}} acciones
+        </div>
+      </div>
+    </div>
+    <div class="aip-header-right">
+      <button *ngIf="isComparisonMode" class="aip-exit-comparison" (click)="exitComparisonMode()" title="Salir de comparación">
+        ← Volver
+      </button>
+      <span class="aip-status" [class.active]="!loading">
+        {{ loading ? '⏳ Analizando...' : '● En línea' }}
+      </span>
+      <button class="aip-close" (click)="closePanel.emit()" title="Cerrar">✕</button>
+    </div>
+  </div>
+
+  <!-- MODO COMPARATIVO: Selector de acciones -->
+  <div class="comparison-selector" *ngIf="isComparisonMode && !loading">
+    <div class="comparison-stocks">
+      <div class="comp-stock main-stock" [style.--stock-color]="'#58a6ff'">
+        <span class="comp-dot">1</span>
+        <span class="comp-symbol">{{symbol}}</span>
+        <span class="comp-check">✓</span>
+      </div>
+      
+      <div class="comp-stock" *ngFor="let stock of comparisonStocks; let i = index" 
+           [style.--stock-color]="stock.color">
+        <span class="comp-dot">{{i + 2}}</span>
+        <span class="comp-symbol">{{stock.symbol}}</span>
+        <button class="comp-remove" (click)="removeComparisonStock(i)" title="Quitar">✕</button>
+      </div>
+      
+      <button class="comp-add-btn" *ngIf="comparisonStocks.length < 3" (click)="openStockSelector()">
+        + Agregar
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal selector de stocks -->
+  <div class="stock-selector-modal" *ngIf="showStockSelector" (click)="closeStockSelector()">
+    <div class="stock-selector-content" (click)="$event.stopPropagation()">
+      <div class="selector-header">
+        <h4>Seleccionar acción para comparar</h4>
+        <button class="close-selector" (click)="closeStockSelector()">✕</button>
+      </div>
+      <input type="text" class="selector-search" placeholder="Buscar acción..." 
+             [(ngModel)]="stockSearchText" (input)="filterAvailableStocks()">
+      <div class="selector-list">
+        <div *ngIf="filteredAvailableStocks.length === 0" class="selector-empty">
+          No se encontraron acciones
+        </div>
+        <button *ngFor="let s of filteredAvailableStocks" 
+                class="selector-item" 
+                [class.disabled]="isStockSelected(s.symbol)"
+                [disabled]="isStockSelected(s.symbol)"
+                (click)="addComparisonStock(s)">
+          <span class="sel-symbol">{{s.symbol}}</span>
+          <span class="sel-name">{{s.name}}</span>
+          <span class="sel-check" *ngIf="isStockSelected(s.symbol)">✓ Seleccionado</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Context badge (solo modo normal) -->
+  <div class="aip-context-bar" *ngIf="!isComparisonMode && symbol && chartContext">
+    <span class="ctx-chip ctx-sym">📊 {{ symbol }}</span>
+    <span class="ctx-chip" [class.ctx-up]="chartContext.priceChange >= 0"
+                           [class.ctx-dn]="chartContext.priceChange < 0">
+      {{ chartContext.priceChange >= 0 ? '▲' : '▼' }}
+      {{ chartContext.lastCandle?.close | number:'1.2-2' }} Bs
+      ({{ chartContext.priceChangePct | number:'1.2-2' }}%)
+    </span>
+    <span class="ctx-chip ctx-ind" *ngIf="chartContext.indicators.rsi14 !== null">
+      RSI {{ chartContext.indicators.rsi14 | number:'1.1-1' }}
+    </span>
+    <span class="ctx-chip ctx-ind" *ngIf="chartContext.indicators.adx !== null">
+      ADX {{ chartContext.indicators.adx | number:'1.1-1' }}
+    </span>
+    <span class="ctx-chip" *ngIf="orderBook && orderBook.length > 0"
+          style="background:rgba(88,166,255,.12);color:#58a6ff">
+      📘 Libro cargado
+    </span>
+  </div>
+
+  <!-- Quick actions modo normal -->
+  <div class="aip-quick-wrap" *ngIf="!isComparisonMode && messages.length === 0 && !loading">
+    <p class="aip-quick-title">
+      {{ symbol ? '¿Qué quieres analizar de ' + symbol + '?' : 'Selecciona una acción para comenzar' }}
+    </p>
+    <div class="aip-quick-grid" *ngIf="symbol">
+      <button *ngFor="let qa of quickActions" class="qa-btn" (click)="sendQuick(qa.msg)">
+        <span class="qa-icon">{{ qa.icon }}</span>
+        <span class="qa-label">{{ qa.label }}</span>
+      </button>
+      <button class="qa-btn comparison-btn" (click)="enterComparisonMode()">
+        <span class="qa-icon">⚖️</span>
+        <span class="qa-label">Comparar con otras</span>
+      </button>
+    </div>
+    <div class="aip-no-stock" *ngIf="!symbol">
+      <span>📈</span>
+      <p>Selecciona una acción del panel izquierdo.</p>
+    </div>
+  </div>
+
+  <!-- Quick actions modo comparativo -->
+  <div class="aip-quick-wrap comparison-quick" *ngIf="isComparisonMode && messages.length === 0 && !loading">
+    <p class="aip-quick-title">
+      Comparando: <b>{{symbol}}</b> 
+      <span *ngIf="comparisonStocks.length > 0"> vs </span>
+      <b *ngFor="let s of comparisonStocks; let last = last">{{s.symbol}}{{!last ? ', ' : ''}}</b>
+    </p>
+    <div class="aip-quick-grid">
+      <button class="qa-btn" (click)="sendComparisonQuick('¿Cuál tiene mejor momento de entrada? Analiza RSI, MACD, ADX, Stoch, Aroon y el libro de órdenes de cada una.')">
+        <span class="qa-icon">🎯</span>
+        <span class="qa-label">Mejor entrada</span>
+      </button>
+      <button class="qa-btn" (click)="sendComparisonQuick('Compara todos los indicadores: RSI, EMAs, MACD, OBV, A/D, Aroon, ADX, Chaikin, ATR%, Stoch y MFI. ¿Cuál muestra señales más fuertes?')">
+        <span class="qa-icon">📊</span>
+        <span class="qa-label">Todos indicadores</span>
+      </button>
+      <button class="qa-btn" (click)="sendComparisonQuick('Compara el libro de órdenes de cada acción: ¿cuál tiene mayor liquidez, menor spread y mejor presión compradora?')">
+        <span class="qa-icon">📘</span>
+        <span class="qa-label">Libros de órdenes</span>
+      </button>
+      <button class="qa-btn" (click)="sendComparisonQuick('¿Cuál tiene mejor riesgo/beneficio? Considera ATR%, stop loss, ADX y niveles de soporte/resistencia.')">
+        <span class="qa-icon">⚖️</span>
+        <span class="qa-label">Riesgo vs Beneficio</span>
+      </button>
+      <button class="qa-btn" (click)="sendComparisonQuick('Analiza el flujo de dinero: OBV, A/D Line, Chaikin, MFI y volumen de cada acción. ¿Dónde está entrando el dinero inteligente?')">
+        <span class="qa-icon">💰</span>
+        <span class="qa-label">Flujo de dinero</span>
+      </button>
+      <button class="qa-btn" (click)="sendComparisonQuick('Si tuviera que elegir UNA sola acción, ¿cuál sería y por qué? Justifica con al menos 5 indicadores distintos y el libro de órdenes.')">
+        <span class="qa-icon">🏆</span>
+        <span class="qa-label">Elegir la mejor</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Messages list -->
+  <div #aiScroll class="aip-messages" *ngIf="messages.length > 0 || loading">
+    <ng-container *ngFor="let msg of messages; trackBy: trackMsg">
+      <div class="aip-msg aip-user" *ngIf="msg.role === 'user'">
+        <div class="msg-bubble user-bubble">
+          <p>{{ msg.content }}</p>
+          <span class="msg-time">{{ msg.timestamp | date:'HH:mm' }}</span>
+        </div>
+        <span class="msg-avatar">👤</span>
+      </div>
+
+      <div class="aip-msg aip-bot" *ngIf="msg.role === 'assistant'">
+        <span class="msg-avatar bot-av">🤖</span>
+        <div class="msg-bubble bot-bubble">
+          <div class="bot-content" [innerHTML]="renderContent(msg.content)"></div>
+          <span class="msg-time">{{ msg.timestamp | date:'HH:mm' }}</span>
+        </div>
+      </div>
+    </ng-container>
+
+    <div class="aip-msg aip-bot" *ngIf="loading">
+      <span class="msg-avatar bot-av">🤖</span>
+      <div class="msg-bubble bot-bubble typing-bubble">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Input bar -->
+  <div class="aip-input-bar">
+    <div class="aip-input-wrap">
+      <textarea
+        #aiTextarea
+        class="aip-textarea"
+        [(ngModel)]="inputText"
+        (keydown)="onKeydown($event)"
+        [disabled]="loading || (!symbol && !isComparisonMode)"
+        [placeholder]="getPlaceholder()"
+        rows="1"
+        (input)="autoResize($event)">
+      </textarea>
+      <button class="aip-send"
+              [disabled]="!inputText.trim() || loading || (!symbol && !isComparisonMode)"
+              (click)="sendMessage()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="22" y1="2" x2="11" y2="13"/>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+      </button>
+    </div>
+    <p class="aip-hint">Enter para enviar · Shift+Enter nueva línea</p>
+  </div>
+
+</aside>

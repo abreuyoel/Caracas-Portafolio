@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+venv/
+env/
+.venv/
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Environment variables - NUNCA subir esto
+.env
+.env.*
+!.env.example
+
+# Node / Angular
+node_modules/
+dist/
+.angular/
+*.log
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+/frontend/dist/
+/backend/__pycache__/
+
+# Test / dev files
+check_*.py
+test_*.py
+verify_*.py
+migrate_*.py
+migration_*.py
+update_db.py
+import_bcv_rates.py
+check_*.txt
+build_err*.log
+build_err*.txt

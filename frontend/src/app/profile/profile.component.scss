@@ -1,0 +1,477 @@
+// ── Design tokens ──────────────────────────────────────────────────────────────
+$bg:        #080d18;
+$card:      rgba(255, 255, 255, 0.04);
+$border:    rgba(255, 255, 255, 0.08);
+$primary:   #4c62ff;
+$accent:    #00e5c3;
+$green:     #2dd994;
+$red:       #ff4d6a;
+$text:      #e8eaf6;
+$muted:     rgba(255, 255, 255, 0.45);
+$muted-hi:  rgba(255, 255, 255, 0.65);
+
+// ── Container ──────────────────────────────────────────────────────────────────
+.profile-container {
+  padding: 28px 24px;
+  max-width: 820px;
+  margin: 0 auto;
+  background: $bg;
+  min-height: 100vh;
+}
+
+// ── Card shell ─────────────────────────────────────────────────────────────────
+.profile-card {
+  background: $card;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid $border;
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+}
+
+mat-card-header {
+  padding: 28px 28px 20px;
+  border-bottom: 1px solid $border;
+  background: rgba(76, 98, 255, 0.06);
+
+  mat-card-title {
+    color: #fff;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+  }
+
+  mat-card-subtitle {
+    color: $muted;
+    margin-top: 6px;
+    font-size: 0.9rem;
+  }
+}
+
+mat-card-content {
+  padding: 28px;
+}
+
+// ── Loading ────────────────────────────────────────────────────────────────────
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 72px 20px;
+  gap: 18px;
+  color: $muted-hi;
+
+  p { margin: 0; font-size: 0.9rem; }
+}
+
+// ── Questionnaire / form ───────────────────────────────────────────────────────
+.questionnaire {
+  h3 {
+    color: #fff;
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin: 0 0 6px;
+  }
+
+  > p {
+    color: $muted;
+    font-size: 0.88rem;
+    margin: 0 0 24px;
+  }
+
+  mat-form-field {
+    width: 100%;
+    margin-bottom: 4px;
+
+    ::ng-deep {
+      .mat-mdc-text-field-wrapper {
+        background: rgba(255, 255, 255, 0.05) !important;
+        border-radius: 10px !important;
+      }
+
+      .mdc-notched-outline__leading,
+      .mdc-notched-outline__notch,
+      .mdc-notched-outline__trailing {
+        border-color: $border !important;
+      }
+
+      &:hover .mdc-notched-outline__leading,
+      &:hover .mdc-notched-outline__notch,
+      &:hover .mdc-notched-outline__trailing {
+        border-color: rgba(76, 98, 255, 0.5) !important;
+      }
+
+      input, .mat-mdc-select-value-text, textarea {
+        color: $text !important;
+      }
+
+      .mat-mdc-floating-label, .mat-mdc-form-field-label {
+        color: $muted !important;
+      }
+
+      .mat-mdc-select-arrow { color: $muted !important; }
+    }
+  }
+
+  .toggles {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin: 24px 0;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid $border;
+    border-radius: 14px;
+
+    mat-slide-toggle {
+      ::ng-deep .mdc-label {
+        color: $muted-hi;
+        font-size: 0.9rem;
+      }
+    }
+  }
+
+  button[type="submit"] {
+    width: 100%;
+    margin-top: 24px;
+    height: 48px;
+    border-radius: 12px !important;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+}
+
+// ── Behavioral section ─────────────────────────────────────────────────────────
+.behavioral-section {
+  margin: 24px 0;
+  padding: 20px;
+  background: rgba(76, 98, 255, 0.06);
+  border: 1px solid rgba(76, 98, 255, 0.18);
+  border-radius: 16px;
+
+  h4 {
+    color: #fff;
+    font-size: 0.98rem;
+    font-weight: 600;
+    margin: 0 0 4px;
+  }
+
+  .section-hint {
+    color: $muted;
+    font-size: 0.8rem;
+    margin: 0 0 18px !important;
+  }
+}
+
+.scenario-question {
+  .scenario-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: $muted-hi;
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-bottom: 14px;
+
+    mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+      color: $primary;
+      flex-shrink: 0;
+    }
+  }
+}
+
+.scenario-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.scenario-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid $border;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+
+  &:hover {
+    background: rgba(76, 98, 255, 0.12);
+    border-color: rgba(76, 98, 255, 0.4);
+  }
+
+  &.selected {
+    background: linear-gradient(135deg, rgba(76, 98, 255, 0.25), rgba(0, 229, 195, 0.1));
+    border-color: $primary;
+    box-shadow: 0 0 0 1px rgba(76, 98, 255, 0.3);
+  }
+
+  .option-emoji {
+    font-size: 1.4rem;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+
+  .option-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .option-label {
+    color: $muted-hi;
+    font-size: 0.82rem;
+    line-height: 1.3;
+
+    .scenario-option.selected & {
+      color: #fff;
+    }
+  }
+
+  .option-sub {
+    color: $muted;
+    font-size: 0.72rem;
+
+    .scenario-option.selected & {
+      color: rgba(255,255,255,0.65);
+    }
+  }
+}
+
+// Return options layout
+.return-options {
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
+}
+
+// ── Sector picker ──────────────────────────────────────────────────────────────
+.sector-section {
+  margin: 20px 0;
+
+  h4 {
+    color: rgba(255, 255, 255, 0.9);
+    margin: 0 0 4px;
+    font-size: 0.95rem;
+    font-weight: 600;
+  }
+
+  .sector-hint {
+    color: $muted;
+    font-size: 0.8rem;
+    margin: 0 0 12px;
+  }
+}
+
+.sector-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sector-chip {
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid rgba($primary, 0.35);
+  background: rgba($primary, 0.07);
+  color: $muted-hi;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+
+  &:hover {
+    border-color: rgba($primary, 0.7);
+    background: rgba($primary, 0.16);
+    color: #fff;
+  }
+
+  &.selected {
+    background: linear-gradient(135deg, rgba($primary, 0.45), rgba(139, 92, 246, 0.45));
+    border-color: $primary;
+    color: #fff;
+    font-weight: 500;
+  }
+
+  &.avoid-chip.selected {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.35), rgba(220, 38, 38, 0.35));
+    border-color: $red;
+  }
+}
+
+// ── Profile display view ───────────────────────────────────────────────────────
+.profile-display {
+
+  .profile-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 14px;
+    margin-bottom: 28px;
+
+    .profile-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 18px;
+      background: rgba(76, 98, 255, 0.07);
+      border: 1px solid rgba(76, 98, 255, 0.18);
+      border-radius: 14px;
+      transition: background 0.2s;
+
+      &:hover { background: rgba(76, 98, 255, 0.12); }
+
+      mat-icon {
+        font-size: 28px;
+        width: 28px;
+        height: 28px;
+        color: $primary;
+        flex-shrink: 0;
+      }
+
+      h4 {
+        color: $muted;
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin: 0;
+      }
+
+      .value {
+        color: #fff;
+        font-size: 1rem;
+        font-weight: 600;
+        margin: 4px 0 0;
+      }
+    }
+  }
+
+  .profile-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 14px;
+    margin-bottom: 28px;
+
+    .stat-card {
+      background: $card !important;
+      border: 1px solid $border !important;
+      border-radius: 14px !important;
+      box-shadow: none !important;
+
+      mat-card-content {
+        padding: 18px !important;
+        text-align: center;
+
+        h4 {
+          color: $muted;
+          font-size: 0.78rem;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          margin: 0 0 10px;
+        }
+
+        .stat-value {
+          color: $green;
+          font-size: 1.5rem;
+          font-weight: 700;
+          margin: 0;
+        }
+      }
+    }
+  }
+
+  .sectors-display {
+    margin: 0 0 24px;
+    padding: 18px;
+    background: $card;
+    border: 1px solid $border;
+    border-radius: 14px;
+
+    h4 {
+      color: $muted-hi;
+      font-size: 0.88rem;
+      font-weight: 600;
+      margin: 0 0 10px;
+    }
+  }
+
+  .notifications-settings {
+    margin-bottom: 28px;
+    padding: 20px;
+    background: $card;
+    border: 1px solid $border;
+    border-radius: 14px;
+
+    h4 {
+      color: #fff;
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin: 0 0 16px;
+    }
+
+    mat-slide-toggle {
+      display: block;
+      margin-bottom: 14px;
+
+      ::ng-deep .mdc-label {
+        color: $muted-hi;
+        font-size: 0.9rem;
+      }
+    }
+  }
+
+  button[mat-raised-button] {
+    width: 100%;
+    height: 48px;
+    border-radius: 12px !important;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+}
+
+// ── Sector tags (display mode) ─────────────────────────────────────────────────
+.sector-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.sector-tag {
+  padding: 4px 12px;
+  border-radius: 14px;
+  font-size: 0.8rem;
+
+  &.preferred {
+    background: rgba($primary, 0.2);
+    border: 1px solid rgba($primary, 0.45);
+    color: #a5b4fc;
+  }
+
+  &.avoided {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    color: #fca5a5;
+  }
+}
+
+// ── Responsive ─────────────────────────────────────────────────────────────────
+@media (max-width: 600px) {
+  .profile-container { padding: 16px 12px; }
+  mat-card-header { padding: 20px 18px 16px; }
+  mat-card-content { padding: 18px; }
+
+  .scenario-options {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-display .profile-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

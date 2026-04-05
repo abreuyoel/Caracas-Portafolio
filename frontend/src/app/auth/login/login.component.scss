@@ -1,0 +1,519 @@
+// ── Variables (heredadas del dashboard) ──
+$bg-deep: #080d18;
+$bg-card: rgba(255, 255, 255, 0.04);
+$bg-card-h: rgba(255, 255, 255, 0.07);
+$border: rgba(255, 255, 255, 0.08);
+$border-h: rgba(255, 255, 255, 0.16);
+$primary: #4c62ff;
+$primary-l: #6b80ff;
+$accent: #00e5c3;
+$text-1: #ffffff;
+$text-2: rgba(255, 255, 255, 0.65);
+$text-3: rgba(255, 255, 255, 0.38);
+$radius: 16px;
+$radius-sm: 10px;
+$shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+$glow-p: rgba(76, 98, 255, 0.22);
+
+// ── Contenedor principal ──
+.login-container {
+  position: relative;
+  min-height: 100vh;
+  background: $bg-deep;
+  overflow-x: hidden;
+  overflow-y: auto;      // permite scroll solo si el contenido lo necesita
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 20px 24px;
+  font-family: 'Space Grotesk', sans-serif;
+  box-sizing: border-box;
+}
+
+// ── Blobs animados (igual que dashboard) ──
+.bg-blob {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.35;
+  animation: blobDrift 18s ease-in-out infinite alternate;
+}
+.blob-1 {
+  width: 520px;
+  height: 520px;
+  background: radial-gradient(circle, $primary 0%, transparent 70%);
+  top: -160px;
+  left: -120px;
+  animation-delay: 0s;
+}
+.blob-2 {
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, #8b5cf6 0%, transparent 70%);
+  top: 40%;
+  right: -100px;
+  animation-delay: 6s;
+}
+.blob-3 {
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, $accent 0%, transparent 70%);
+  bottom: 80px;
+  left: 30%;
+  animation-delay: 12s;
+  opacity: 0.2;
+}
+
+@keyframes blobDrift {
+  from {
+    transform: translate(0, 0) scale(1);
+  }
+  to {
+    transform: translate(30px, 20px) scale(1.06);
+  }
+}
+
+// ── Tarjeta de login ──
+.login-card {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  background: $bg-card;
+  backdrop-filter: blur(24px);
+  border: 1px solid $border;
+  border-radius: $radius;
+  padding: 40px 40px;
+  z-index: 1;
+  animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+
+  &:hover {
+    border-color: $border-h;
+    box-shadow: $shadow;
+    background: $bg-card-h;
+  }
+
+  .card-glow {
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: radial-gradient(circle at 50% 0%, $primary, transparent 70%);
+    border-radius: $radius;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    filter: blur(20px);
+  }
+
+  &:hover .card-glow {
+    opacity: 0.5;
+  }
+
+  mat-card-header {
+    text-align: center;
+    margin-bottom: 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    .logo-container {
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, $primary, #7c3aed);
+      border-radius: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 20px;
+      box-shadow: 0 8px 24px $glow-p;
+
+      .logo-icon {
+        font-size: 2.5rem;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+      }
+    }
+
+    mat-card-title {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: $text-1;
+      margin: 0 0 8px;
+
+      .logo-accent {
+        color: $accent;
+      }
+    }
+
+    mat-card-subtitle {
+      color: $text-2;
+      font-size: 0.95rem;
+      margin: 0;
+    }
+  }
+
+  mat-card-content {
+    .form-group {
+      margin-bottom: 24px;
+
+      .form-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: $text-2;
+        font-size: 0.875rem;
+        font-weight: 500;
+        margin-bottom: 10px;
+
+        mat-icon {
+          font-size: 18px;
+          width: 18px;
+          height: 18px;
+          color: $primary;
+        }
+      }
+
+      .input-wrapper {
+        position: relative;
+
+        input[matInput] {
+          width: 100%;
+          padding: 16px 20px;
+          background: rgba(255, 255, 255, 0.03);
+          border: 1px solid $border;
+          border-radius: $radius-sm;
+          color: $text-1;
+          font-size: 1rem;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          outline: none;
+
+          &::placeholder {
+            color: $text-3;
+          }
+
+          &:hover {
+            border-color: $border-h;
+            background: rgba(255, 255, 255, 0.05);
+          }
+
+          &:focus {
+            border-color: $primary;
+            background: rgba(76, 98, 255, 0.05);
+            box-shadow: 0 0 0 4px $glow-p;
+          }
+        }
+
+        .input-border {
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          width: 100%;
+          height: 2px;
+          background: linear-gradient(90deg, $primary, $accent);
+          transform: scaleX(0);
+          transition: transform 0.3s ease;
+          border-radius: 0 0 $radius-sm $radius-sm;
+        }
+
+        &:focus-within .input-border {
+          transform: scaleX(1);
+        }
+      }
+
+      mat-error {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: #ff4d6a;
+        font-size: 0.8rem;
+        margin-top: 8px;
+        padding: 8px 12px;
+        background: rgba(255, 77, 106, 0.1);
+        border-radius: 8px;
+        animation: shake 0.4s ease-in-out;
+
+        mat-icon {
+          font-size: 16px;
+          width: 16px;
+          height: 16px;
+        }
+      }
+    }
+
+    .form-options {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 28px;
+
+      .checkbox-container {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        cursor: pointer;
+        user-select: none;
+
+        .custom-checkbox {
+          display: none;
+
+          &:checked + .checkmark {
+            background: linear-gradient(135deg, $primary, #7c3aed);
+            border-color: transparent;
+
+            &::after {
+              opacity: 1;
+              transform: scale(1);
+            }
+          }
+        }
+
+        .checkmark {
+          width: 20px;
+          height: 20px;
+          border: 2px solid $border;
+          border-radius: 6px;
+          position: relative;
+          transition: all 0.3s ease;
+          flex-shrink: 0;
+
+          &::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            transition: all 0.2s ease;
+            opacity: 0;
+          }
+
+          &:hover {
+            border-color: $primary;
+          }
+        }
+
+        .checkbox-label {
+          color: $text-2;
+          font-size: 0.875rem;
+        }
+      }
+
+      .forgot-password {
+        color: $primary;
+        font-size: 0.875rem;
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.3s ease;
+
+        &:hover {
+          color: $primary-l;
+          text-decoration: underline;
+        }
+      }
+    }
+
+    .submit-btn {
+      width: 100%;
+      height: 56px;
+      background: linear-gradient(135deg, $primary, #7c3aed);
+      border: none;
+      border-radius: $radius-sm;
+      font-size: 1rem;
+      font-weight: 600;
+      color: white;
+      box-shadow: 0 4px 15px $glow-p;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+      padding: 0;
+
+      .btn-content {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        position: relative;
+        z-index: 1;
+      }
+
+      .btn-shine {
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(255, 255, 255, 0.2),
+          transparent
+        );
+        transition: left 0.5s ease;
+      }
+
+      &:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px $glow-p;
+
+        .btn-shine {
+          left: 100%;
+        }
+      }
+
+      &:active:not(:disabled) {
+        transform: translateY(0);
+      }
+
+      &:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+        transform: none;
+      }
+    }
+  }
+
+  mat-card-actions.card-footer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 0 0;
+    margin-top: 16px;
+    border-top: 1px solid $border;
+
+    .divider {
+      position: relative;
+      text-align: center;
+      margin-bottom: 24px;
+      width: 100%;
+
+      &::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: $border;
+      }
+
+      span {
+        position: relative;
+        background: $bg-card;
+        padding: 0 16px;
+        color: $text-3;
+        font-size: 0.875rem;
+      }
+    }
+
+    .register-text {
+      color: $text-2;
+      font-size: 0.9rem;
+      margin: 0;
+      text-align: center;
+
+      .register-link {
+        color: $primary;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        transition: all 0.3s ease;
+
+        mat-icon {
+          font-size: 16px;
+          width: 16px;
+          height: 16px;
+          transition: transform 0.3s ease;
+        }
+
+        &:hover {
+          color: $primary-l;
+
+          mat-icon {
+            transform: translateX(4px);
+          }
+        }
+      }
+    }
+  }
+}
+
+.login-footer {
+  margin-top: 32px;
+  text-align: center;
+  z-index: 1;
+
+  p {
+    color: $text-3;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-8px);
+  }
+  75% {
+    transform: translateX(8px);
+  }
+}
+
+// Responsive
+@media (max-width: 480px) {
+  .login-container {
+    padding: 16px;
+  }
+
+  .login-card {
+    padding: 36px 24px;
+
+    mat-card-header {
+      .logo-container {
+        width: 64px;
+        height: 64px;
+
+        .logo-icon {
+          font-size: 2rem;
+        }
+      }
+
+      mat-card-title {
+        font-size: 1.5rem;
+      }
+    }
+
+    mat-card-content {
+      .form-options {
+        flex-direction: column;
+        gap: 12px;
+        align-items: flex-start;
+      }
+    }
+  }
+}

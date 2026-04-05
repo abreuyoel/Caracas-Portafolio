@@ -1,0 +1,499 @@
+<div class="dashboard-container">
+  <!-- Ambient background blobs -->
+  <div class="bg-blob blob-1"></div>
+  <div class="bg-blob blob-2"></div>
+  <div class="bg-blob blob-3"></div>
+
+  <!-- Top toolbar -->
+  <mat-toolbar class="top-toolbar">
+    <div class="toolbar-content">
+      <button mat-icon-button class="mobile-menu-btn" (click)="toggleSidebar()">
+        <mat-icon>menu</mat-icon>
+      </button>
+      <div class="logo-wrap">
+        <span class="logo-icon">📊</span>
+        <span class="logo-text">Caracas <span class="logo-accent">Portafolio</span></span>
+      </div>
+      <span class="spacer"></span>
+      <nav class="desktop-nav">
+        <a class="nav-link" routerLink="/dashboard" routerLinkActive="active">
+          <mat-icon>dashboard</mat-icon><span>Inicio</span>
+        </a>
+        <a class="nav-link" routerLink="/portfolio" routerLinkActive="active">
+          <mat-icon>pie_chart</mat-icon><span>Portafolio</span>
+        </a>
+        <a class="nav-link" routerLink="/transactions" routerLinkActive="active">
+          <mat-icon>swap_horiz</mat-icon><span>Transacciones</span>
+        </a>
+        <a class="nav-link" routerLink="/goals" routerLinkActive="active">
+          <mat-icon>track_changes</mat-icon><span>Objetivos</span>
+        </a>
+        <a class="nav-link" routerLink="/graficos" routerLinkActive="active">
+          <mat-icon>candlestick_chart</mat-icon><span>Gráficos</span>
+        </a>
+        <!-- Redirige a la nueva página de libros -->
+        <a class="nav-link " routerLink="/libros">
+          <mat-icon>menu_book</mat-icon><span>Libros</span>
+        </a>
+        <a class="nav-link" routerLink="/social" routerLinkActive="active">
+          <mat-icon>groups</mat-icon><span>Red</span>
+        </a>
+        <a class="nav-link" routerLink="/profile" routerLinkActive="active">
+          <mat-icon>person</mat-icon><span>Perfil</span>
+        </a>
+      </nav>
+      <div class="user-actions">
+        <button mat-icon-button [matMenuTriggerFor]="menu" class="avatar-btn" matTooltip="Cuenta">
+          <mat-icon>account_circle</mat-icon>
+        </button>
+        <mat-menu #menu="matMenu" class="user-menu-panel">
+
+          <button mat-menu-item (click)="logout()" class="logout-item">
+            <mat-icon class="logout-icon">logout</mat-icon>
+            <span class="logout-text">Cerrar Sesión</span>
+          </button>
+        </mat-menu>
+      </div>
+    </div>
+  </mat-toolbar>
+
+  <!-- Mobile Sidebar -->
+  <div class="sidebar-overlay" [class.open]="sidebarOpen" (click)="toggleSidebar()"></div>
+  <aside class="mobile-sidebar" [class.open]="sidebarOpen">
+    <div class="sidebar-header">
+      <div class="logo-wrap">
+        <span class="logo-icon">📊</span>
+        <span class="logo-text">Caracas <span class="logo-accent">Portafolio</span></span>
+      </div>
+      <button mat-icon-button class="close-btn" (click)="toggleSidebar()">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+    <div class="sidebar-content">
+      <a routerLink="/dashboard" class="nav-item" routerLinkActive="active" (click)="toggleSidebar()">
+        <mat-icon>dashboard</mat-icon><span>Inicio</span>
+      </a>
+      <a routerLink="/portfolio" class="nav-item" routerLinkActive="active" (click)="toggleSidebar()">
+        <mat-icon>pie_chart</mat-icon><span>Portafolio</span>
+      </a>
+      <a routerLink="/transactions" class="nav-item" routerLinkActive="active" (click)="toggleSidebar()">
+        <mat-icon>swap_horiz</mat-icon><span>Transacciones</span>
+      </a>
+      <a routerLink="/goals" class="nav-item" routerLinkActive="active" (click)="toggleSidebar()">
+        <mat-icon>track_changes</mat-icon><span>Objetivos</span>
+      </a>
+      <a routerLink="/graficos" class="nav-item" routerLinkActive="active" (click)="toggleSidebar()">
+        <mat-icon>candlestick_chart</mat-icon><span>Gráficos</span>
+      </a>
+      <!-- Redirige a la nueva página de libros -->
+      <a routerLink="/libros" class="nav-item nav-item--libros" (click)="toggleSidebar()">
+        <mat-icon>menu_book</mat-icon><span>Libros de Órdenes</span>
+      </a>
+      <a routerLink="/social" class="nav-item" routerLinkActive="active" (click)="toggleSidebar()">
+        <mat-icon>groups</mat-icon><span>Red de Inversores</span>
+      </a>
+      <a routerLink="/profile" class="nav-item" routerLinkActive="active" (click)="toggleSidebar()">
+        <mat-icon>person</mat-icon><span>Mi Perfil</span>
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <main class="content">
+    <div class="page-header">
+      <div class="page-header__text">
+        <p class="page-header__eyebrow">Bolsa de Caracas</p>
+        <h1 class="page-header__title">Tu Portafolio</h1>
+        <p class="page-header__sub">Resumen en tiempo real de tus inversiones</p>
+      </div>
+    </div>
+
+    @if (loading) {
+    <div class="loading-state">
+      <div class="loading-ring">
+        <mat-spinner diameter="48" strokeWidth="3"></mat-spinner>
+      </div>
+      <p>Cargando tu portafolio…</p>
+    </div>
+    } @else {
+    <div class="kpi-grid">
+      <div class="kpi-card kpi-card--primary" [class.kpi-card--up]="portfolioSummary.unrealized_pnl_pct >= 0"
+        [class.kpi-card--dn]="portfolioSummary.unrealized_pnl_pct < 0">
+        <div class="kpi-card__glow"></div>
+        <div class="kpi-card__icon">💰</div>
+        <div class="kpi-card__body">
+          <span class="kpi-card__label">Valor Total</span>
+          <span class="kpi-card__value">{{ portfolioSummary.current_value_usd | currency:'USD':'symbol':'1.2-2'
+            }}</span>
+          <span class="kpi-card__badge" [class.badge--up]="portfolioSummary.unrealized_pnl_pct >= 0"
+            [class.badge--dn]="portfolioSummary.unrealized_pnl_pct < 0">
+            <mat-icon>{{ portfolioSummary.unrealized_pnl_pct >= 0 ? 'trending_up' : 'trending_down' }}</mat-icon>
+            {{ portfolioSummary.unrealized_pnl_pct >= 0 ? '+' : '' }}{{ portfolioSummary.unrealized_pnl_pct |
+            number:'1.2-2' }}%
+          </span>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-card__icon">📈</div>
+        <div class="kpi-card__body">
+          <span class="kpi-card__label">Capital Invertido</span>
+          <span class="kpi-card__value">{{ portfolioSummary.total_invested_usd | currency:'USD':'symbol':'1.2-2'
+            }}</span>
+        </div>
+      </div>
+      <div class="kpi-card" [class.kpi-card--up]="portfolioSummary.unrealized_pnl_usd >= 0"
+        [class.kpi-card--dn]="portfolioSummary.unrealized_pnl_usd < 0">
+        <div class="kpi-card__icon">🎯</div>
+        <div class="kpi-card__body">
+          <span class="kpi-card__label">Ganancia / Pérdida</span>
+          <span class="kpi-card__value" [class.positive]="portfolioSummary.unrealized_pnl_usd >= 0"
+            [class.negative]="portfolioSummary.unrealized_pnl_usd < 0">
+            {{ portfolioSummary.unrealized_pnl_usd >= 0 ? '+' : '' }}{{ portfolioSummary.unrealized_pnl_usd |
+            currency:'USD':'symbol':'1.2-2' }}
+          </span>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-card__icon">📦</div>
+        <div class="kpi-card__body">
+          <span class="kpi-card__label">Posiciones Abiertas</span>
+          <span class="kpi-card__value">{{ portfolioSummary.total_positions }}</span>
+        </div>
+      </div>
+    </div>
+    }
+
+    <div class="cta-card">
+      <div class="cta-card__icon">🚀</div>
+      <div class="cta-card__body">
+        <h3>Comienza a Gestionar tu Inversión</h3>
+        <p>Agrega transacciones de compra/venta, sigue tus gráficos y monitorea los libros de órdenes en tiempo real.
+        </p>
+      </div>
+      <button mat-raised-button color="primary" class="cta-card__btn" routerLink="/transactions/new">
+        <mat-icon>add</mat-icon> Nueva Transacción
+      </button>
+    </div>
+
+    <!-- ── Market Movers ─────────────────────────────────────────────────── -->
+    <div class="section-header">
+      <div class="section-title-wrap">
+        <mat-icon class="section-icon">trending_up</mat-icon>
+        <h2 class="section-title">Movimientos del Mercado</h2>
+        @if (syncRunning) {
+        <span class="sync-badge" [matTooltip]="'Actualizando precios: ' + syncDone + '/' + syncTotal + ' acciones'">
+          <mat-spinner diameter="14"></mat-spinner>
+          Sincronizando {{ syncDone }}/{{ syncTotal }}
+        </span>
+        }
+      </div>
+      <div class="period-pills">
+        <button class="pill" [class.pill--active]="moversPeriod==='weekly'"
+          (click)="moversPeriod='weekly'; onMoversPeriodChange()">Semanal</button>
+        <button class="pill" [class.pill--active]="moversPeriod==='monthly'"
+          (click)="moversPeriod='monthly'; onMoversPeriodChange()">Mensual</button>
+        <button class="pill" [class.pill--active]="moversPeriod==='quarterly'"
+          (click)="moversPeriod='quarterly'; onMoversPeriodChange()">Trimestral</button>
+        <button class="pill pill--refresh" (click)="loadMarketMovers()" [disabled]="moversLoading"
+          matTooltip="Refrescar">
+          <mat-icon style="font-size:14px;width:14px;height:14px">refresh</mat-icon>
+        </button>
+      </div>
+    </div>
+
+    @if (moversLoading) {
+    <div class="movers-loading"><mat-spinner diameter="32"></mat-spinner><span>Calculando movimientos...</span></div>
+    } @else if (moversMessage && gainers.length === 0 && losers.length === 0) {
+    <div class="movers-empty">
+      <mat-icon>info</mat-icon>
+      <p>{{ moversMessage }}</p>
+      @if (syncRunning) {
+      <small>Sincronizando datos ({{ syncDone }}/{{ syncTotal }})... Los movimientos aparecerán al completar.</small>
+      } @else {
+      <small>Los datos históricos se actualizan automáticamente al iniciar la aplicación.</small>
+      }
+    </div>
+    } @else {
+    <div class="movers-grid">
+
+      <!-- Ganadoras -->
+      <div class="movers-card">
+        <div class="movers-card__header gainers-header">
+          <mat-icon>trending_up</mat-icon>
+          <span>Más Ganadoras</span>
+          <span class="movers-count">Top {{ gainers.length }}</span>
+        </div>
+        @if (gainers.length === 0) {
+        <div class="movers-empty-inline">Sin datos suficientes</div>
+        }
+        @for (m of gainers; track m.symbol) {
+        <div class="mover-row" routerLink="/graficos" [queryParams]="{symbol: m.symbol}">
+          <div class="mover-sym">
+            <span class="mover-symbol">{{ m.symbol }}</span>
+            <span class="mover-name">{{ m.name | slice:0:22 }}</span>
+          </div>
+          <div class="mover-right">
+            <span class="mover-price">{{ moverPrice(m.latest_price, m.last_date) | number:'1.2-4' }} {{ showMoversInUsd
+              ? '$' : 'Bs' }}</span>
+            <span class="mover-badge" [class.badge--up]="moverChangePct(m) >= 0"
+              [class.badge--dn]="moverChangePct(m) < 0">
+              {{ moverChangePct(m) >= 0 ? '+' : '' }}{{ moverChangePct(m) | number:'1.1-1' }}%
+            </span>
+          </div>
+        </div>
+        }
+      </div>
+
+      <!-- Perdedoras -->
+      <div class="movers-card">
+        <div class="movers-card__header losers-header">
+          <mat-icon>trending_down</mat-icon>
+          <span>Más Perdedoras</span>
+          <span class="movers-count">Top {{ losers.length }}</span>
+        </div>
+        @if (losers.length === 0) {
+        <div class="movers-empty-inline">Sin datos suficientes</div>
+        }
+        @for (m of losers; track m.symbol) {
+        <div class="mover-row" routerLink="/graficos" [queryParams]="{symbol: m.symbol}">
+          <div class="mover-sym">
+            <span class="mover-symbol">{{ m.symbol }}</span>
+            <span class="mover-name">{{ m.name | slice:0:22 }}</span>
+          </div>
+          <div class="mover-right">
+            <span class="mover-price">{{ moverPrice(m.latest_price, m.last_date) | number:'1.2-4' }} {{ showMoversInUsd
+              ? '$' : 'Bs' }}</span>
+            <span class="mover-badge" [class.badge--up]="moverChangePct(m) >= 0"
+              [class.badge--dn]="moverChangePct(m) < 0">
+              {{ moverChangePct(m) >= 0 ? '+' : '' }}{{ moverChangePct(m) | number:'1.1-1' }}%
+            </span>
+          </div>
+        </div>
+        }
+      </div>
+
+      <!-- Estables -->
+      <div class="movers-card">
+        <div class="movers-card__header stable-header">
+          <mat-icon>remove</mat-icon>
+          <span>Estables</span>
+          <span class="movers-count">{{ stable.length }} acciones</span>
+        </div>
+        @if (stable.length === 0) {
+        <div class="movers-empty-inline">Sin datos suficientes</div>
+        }
+        @for (m of stable; track m.symbol) {
+        <div class="mover-row" routerLink="/graficos" [queryParams]="{symbol: m.symbol}">
+          <div class="mover-sym">
+            <span class="mover-symbol">{{ m.symbol }}</span>
+            <span class="mover-name">{{ m.name | slice:0:22 }}</span>
+          </div>
+          <div class="mover-right">
+            <span class="mover-price">{{ moverPrice(m.latest_price, m.last_date) | number:'1.2-4' }} {{ showMoversInUsd
+              ? '$' : 'Bs' }}</span>
+            <span class="mover-badge" [class.badge--up]="moverChangePct(m) > 1"
+              [class.badge--dn]="moverChangePct(m) < -1"
+              [class.badge--stable]="moverChangePct(m) >= -1 && moverChangePct(m) <= 1">
+              {{ moverChangePct(m) >= 0 ? '+' : '' }}{{ moverChangePct(m) | number:'1.1-1' }}%
+            </span>
+          </div>
+        </div>
+        }
+      </div>
+
+      <!-- Tendencia alcista (mensual / trimestral) -->
+      @if ((moversPeriod === 'monthly' || moversPeriod === 'quarterly') && uptrend.length > 0) {
+      <div class="movers-card uptrend-card">
+        <div class="movers-card__header uptrend-header">
+          <mat-icon>rocket_launch</mat-icon>
+          <span>Ciclo de Subida</span>
+          <span class="movers-count">{{ moversPeriod === 'monthly' ? 'Mensual' : 'Trimestral' }}</span>
+        </div>
+        @for (m of uptrend; track m.symbol) {
+        <div class="mover-row" routerLink="/graficos" [queryParams]="{symbol: m.symbol}">
+          <div class="mover-sym">
+            <span class="mover-symbol">{{ m.symbol }}</span>
+            <span class="mover-name">{{ m.name | slice:0:22 }}</span>
+          </div>
+          <div class="mover-right">
+            <span class="mover-price">{{ m.consecutive_up }} días alza</span>
+            <span class="mover-badge" [class.badge--up]="moverChangePct(m) >= 0"
+              [class.badge--dn]="moverChangePct(m) < 0">
+              {{ moverChangePct(m) >= 0 ? '+' : '' }}{{ moverChangePct(m) | number:'1.1-1' }}%
+            </span>
+          </div>
+        </div>
+        }
+      </div>
+      }
+
+    </div>
+    <p class="movers-footer">{{ moversTotal }} acciones analizadas · {{ showMoversInUsd ? 'Precios convertidos a USD
+      según tasas BCV históricas' : 'Precios en Bolívares (BVC)' }}</p>
+    }
+
+    <!-- ── Cartera Institucional ─────────────────────────────────────────── -->
+    @if (institutional.length > 0) {
+    <div class="section-header" style="margin-top:32px">
+      <div class="section-title-wrap">
+        <mat-icon class="section-icon" style="color:#a78bfa">account_balance</mat-icon>
+        <h2 class="section-title">Cartera Institucional</h2>
+      </div>
+      <span class="section-hint-inline">Mayor liquidez y actividad en el período</span>
+    </div>
+    <div class="institutional-grid">
+      @for (m of institutional; track m.symbol) {
+      <div class="inst-card" routerLink="/graficos" [queryParams]="{symbol: m.symbol}">
+        <div class="inst-card__top">
+          <span class="inst-symbol">{{ m.symbol }}</span>
+          <span class="mover-badge" [class.badge--up]="moverChangePct(m) >= 0"
+            [class.badge--dn]="moverChangePct(m) < 0">
+            {{ moverChangePct(m) >= 0 ? '+' : '' }}{{ moverChangePct(m) | number:'1.1-1' }}%
+          </span>
+        </div>
+        <span class="inst-name">{{ m.name | slice:0:32 }}</span>
+        <div class="inst-stats">
+          <div class="inst-stat">
+            <span class="inst-stat-label">Sesiones</span>
+            <span class="inst-stat-val">{{ m.sessions }}</span>
+          </div>
+          <div class="inst-stat">
+            <span class="inst-stat-label">Vol. acum.</span>
+            <span class="inst-stat-val">{{ m.total_volume | number }}</span>
+          </div>
+          <div class="inst-stat">
+            <span class="inst-stat-label">Precio</span>
+            <span class="inst-stat-val">{{ moverPrice(m.latest_price, m.last_date) | number:'1.2-4' }} {{
+              showMoversInUsd ? '$' : 'Bs' }}</span>
+          </div>
+        </div>
+      </div>
+      }
+    </div>
+    }
+
+    <!-- ── Company Info ───────────────────────────────────────────────────── -->
+    <div class="section-header" style="margin-top:36px">
+      <div class="section-title-wrap">
+        <mat-icon class="section-icon">business</mat-icon>
+        <h2 class="section-title">Información de Emisor</h2>
+      </div>
+    </div>
+    <div class="company-info-panel">
+      <div class="company-select-row">
+        <mat-form-field appearance="outline" class="company-select" panelClass="stock-info-panel">
+          <mat-label>Selecciona una acción</mat-label>
+          <mat-select [(ngModel)]="selectedInfoSymbol" (selectionChange)="loadCompanyInfo()">
+            <!-- Embedded search -->
+            <div class="stock-search-wrap" (click)="$event.stopPropagation()">
+              <mat-icon class="stock-search-icon">search</mat-icon>
+              <input class="stock-search-input" [(ngModel)]="stockInfoFilter" [ngModelOptions]="{standalone: true}"
+                placeholder="Buscar acción..." autocomplete="off">
+            </div>
+            @if (stocksLoading) {
+            <mat-option disabled>
+              <mat-spinner diameter="18" style="margin:0 auto"></mat-spinner>
+            </mat-option>
+            }
+            @for (s of filteredInfoStocks; track s.symbol) {
+            <mat-option [value]="s.symbol" class="stock-info-option">
+              <span class="si-symbol">{{ s.symbol }}</span>
+              <span class="si-name">{{ s.name | slice:0:45 }}</span>
+            </mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      @if (companyInfoLoading) {
+      <div class="company-loading"><mat-spinner diameter="28"></mat-spinner><span>Cargando información...</span></div>
+      } @else if (companyInfo) {
+      <div class="company-info-grid">
+        <div class="ci-item">
+          <span class="ci-label">Empresa</span>
+          <span class="ci-value">{{ companyInfo.company_name || companyInfo.symbol }}</span>
+        </div>
+        <div class="ci-item">
+          <span class="ci-label">Símbolo</span>
+          <span class="ci-value ci-mono">{{ companyInfo.symbol }}</span>
+        </div>
+        <div class="ci-item">
+          <span class="ci-label">ISIN</span>
+          <span class="ci-value ci-mono">{{ companyInfo.isin || '—' }}</span>
+        </div>
+        <div class="ci-item">
+          <span class="ci-label">Moneda</span>
+          <span class="ci-value">{{ companyInfo.currency || 'Bs' }}</span>
+        </div>
+        <div class="ci-item">
+          <span class="ci-label">Acciones en Circulación</span>
+          <span class="ci-value">{{ companyInfo.shares_outstanding | number }}</span>
+        </div>
+        <div class="ci-item">
+          <span class="ci-label">Estado</span>
+          <span class="ci-value" [style.color]="companyInfo.is_active ? '#2dd994' : '#ff4d6a'">
+            {{ companyInfo.is_active ? 'Activo' : 'Inactivo' }}
+          </span>
+        </div>
+      </div>
+      } @else if (selectedInfoSymbol) {
+      <p class="company-hint">No se encontró información para {{ selectedInfoSymbol }}.</p>
+      } @else {
+      <p class="company-hint">Selecciona una acción para ver sus datos como número de acciones en circulación, ISIN y
+        más.</p>
+      }
+    </div>
+
+  </main>
+
+  <!-- Pie de página con descargo de responsabilidad -->
+  <footer class="dashboard-footer">
+    <div class="footer-content">
+      <p class="disclaimer">
+        Caracas Portafolio es una plataforma independiente y no está afiliada, asociada, autorizada ni respaldada oficialmente por la Bolsa de Valores de Caracas (BVC).
+      </p>
+      <div class="footer-links">
+        <a (click)="showTerms($event)">Términos</a>
+        <span class="dot">·</span>
+        <a (click)="showPrivacy($event)">Privacidad</a>
+        <span class="dot">·</span>
+        <span class="rights">© 2026 Caracas Portafolio</span>
+      </div>
+    </div>
+  </footer>
+
+  <button mat-fab class="ai-chat-fab" routerLink="/ai-chat" matTooltip="Asistente IA">
+    <mat-icon>smart_toy</mat-icon>
+  </button>
+
+  <!-- Support panel -->
+  <div class="support-panel" [class.open]="supportOpen">
+    <div class="support-header">
+      <span>💬 Soporte</span>
+      <button mat-icon-button (click)="supportOpen=false" class="sp-close">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+    <p class="support-hint">¿Tienes algún problema o sugerencia? Escríbenos y te responderemos pronto.</p>
+    <textarea class="support-textarea" [(ngModel)]="supportMessage" placeholder="Describe tu problema o sugerencia..."
+      rows="4"></textarea>
+    <button mat-raised-button class="support-send-btn" (click)="sendSupport()"
+      [disabled]="!supportMessage.trim() || sendingSupport">
+      <mat-icon>send</mat-icon>
+      {{ sendingSupport ? 'Enviando...' : 'Enviar' }}
+    </button>
+    <div class="support-tickets" *ngIf="myTickets.length > 0">
+      <p class="tickets-label">Tus últimos mensajes:</p>
+      <div class="ticket-item" *ngFor="let t of myTickets">
+        <span class="ticket-msg">{{ t.message | slice:0:60 }}{{ t.message.length > 60 ? '…' : '' }}</span>
+        <span class="ticket-status" [class.pending]="t.status==='pending'" [class.resolved]="t.status==='resolved'">
+          {{ t.status === 'pending' ? 'Pendiente' : t.status === 'resolved' ? 'Resuelto' : 'En revisión' }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <button mat-mini-fab class="support-fab" (click)="toggleSupport()" matTooltip="Soporte" aria-label="Soporte">
+    <mat-icon>support_agent</mat-icon>
+  </button>
+</div>

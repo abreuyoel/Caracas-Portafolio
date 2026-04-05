@@ -1,0 +1,322 @@
+<div class="charts-shell" [class.fullscreen]="isFullscreen">
+
+  <!-- ── Sidebar acciones ─────────────────────────────────────────────── -->
+  <aside class="sidebar" [class.collapsed]="sidebarCollapsed">
+    <div class="sidebar-header">
+      <span class="sidebar-title" *ngIf="!sidebarCollapsed">Acciones BVC</span>
+      <button class="collapse-btn" (click)="sidebarCollapsed=!sidebarCollapsed">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <path *ngIf="!sidebarCollapsed" d="M11 8L5 3v2.5L8.5 8 5 10.5V13l6-5z"/>
+          <path *ngIf="sidebarCollapsed"  d="M5 8l6-5v2.5L7.5 8 11 10.5V13L5 8z"/>
+        </svg>
+      </button>
+    </div>
+    <div class="stock-search" *ngIf="!sidebarCollapsed">
+      <input type="text" placeholder="Buscar..." [(ngModel)]="searchFilter" class="search-input"/>
+    </div>
+
+    <!-- Loading stocks state -->
+    <div class="stocks-loading" *ngIf="loadingStocks">
+      <div class="stocks-progress-bar"><div class="stocks-progress-fill"></div></div>
+      <span *ngIf="!sidebarCollapsed">Buscando acciones activas…</span>
+    </div>
+
+    <div class="stock-list" *ngIf="!loadingStocks">
+      <button *ngFor="let s of filteredStocks" class="stock-item"
+              [class.active]="selectedSymbol===s.symbol"
+              (click)="loadStock(s.symbol)" [title]="s.name">
+        <span class="stock-sym">{{s.symbol}}</span>
+        <span class="stock-name" *ngIf="!sidebarCollapsed">{{s.name | slice:0:22}}</span>
+        <span class="stock-badge" *ngIf="lastPrices[s.symbol]"
+              [class.up]="priceChanges[s.symbol]>=0" [class.dn]="priceChanges[s.symbol]<0">
+          {{lastPrices[s.symbol] | number:'1.2-2'}}
+        </span>
+      </button>
+    </div>
+
+    <!-- ── Crédito de autor ─────────────────────────────────────────── -->
+    <div class="dev-credit" *ngIf="!loadingStocks">
+      <a href="https://www.linkedin.com/in/yoel-abreu/" target="_blank" rel="noopener noreferrer">
+        <div class="dev-credit-icon">in</div>
+        <div class="dev-credit-text">
+          <span class="dev-credit-label">Dev. por</span>
+          <span class="dev-credit-name">Yoel Abreu</span>
+        </div>
+        <span class="dev-credit-arrow">↗</span>
+      </a>
+    </div>
+
+  </aside>
+
+  <!-- ── Main area ─────────────────────────────────────────────────────── -->
+  <div class="main-area">
+
+    <div class="top-bar">
+      <div class="top-left">
+        <div class="symbol-display" *ngIf="selectedSymbol">
+          <span class="sym-big">{{selectedSymbol}}</span>
+          <span class="live-dot" *ngIf="marketOpen" title="Mercado abierto — datos en tiempo real">● LIVE</span>
+          <span class="sym-name">{{selectedName}}</span>
+          <span class="price-display" *ngIf="currentPrice"
+                [class.up]="priceChange>=0" [class.dn]="priceChange<0">
+            {{(showInUsd && currentUsdRate ? currentPrice/currentUsdRate : currentPrice) | number:'1.2-4'}}
+            <span class="price-change">
+              {{priceChange>=0?'+':''}}{{(showInUsd && currentUsdRate ? priceChange/currentUsdRate : priceChange) | number:'1.2-4'}}
+              ({{priceChangePct | number:'1.2-2'}}%)
+            </span>
+          </span>
+        </div>
+        <!-- OHLCV bar — muestra candle hovereada o la última -->
+        <div class="ohlcv-bar" *ngIf="displayCandle">
+          <span class="currency-label">{{showInUsd ? 'USD' : 'Bs'}}</span>
+          <span>O <b>{{displayCandle.open | number:'1.2-4'}}</b></span>
+          <span>H <b class="up">{{displayCandle.high | number:'1.2-4'}}</b></span>
+          <span>L <b class="dn">{{displayCandle.low | number:'1.2-4'}}</b></span>
+          <span>C <b>{{displayCandle.close | number:'1.2-4'}}</b></span>
+          <span>V <b>{{displayCandle.volume | number:'1.0-0'}}</b></span>
+        </div>
+      </div>
+      <div class="top-right">
+        <div class="btn-group">
+          <button *ngFor="let tf of timeframes" class="sm-btn"
+                  [class.active]="currentTF===tf" (click)="setTimeframe(tf)">{{tf}}</button>
+        </div>
+        <div class="btn-group">
+          <button class="sm-btn icon-btn" [class.active]="chartType==='candlestick'"
+                  (click)="setChartType('candlestick')" title="Velas">🕯</button>
+          <button class="sm-btn icon-btn" [class.active]="chartType==='bar'"
+                  (click)="setChartType('bar')" title="Barras">▬</button>
+          <button class="sm-btn icon-btn" [class.active]="chartType==='line'"
+                  (click)="setChartType('line')" title="Línea">📈</button>
+          <button class="sm-btn icon-btn" [class.active]="chartType==='area'"
+                  (click)="setChartType('area')" title="Área">◭</button>
+        </div>
+        <div class="btn-group">
+          <button *ngFor="let t of drawingTools" class="sm-btn icon-btn"
+                  [class.active]="t.active" (click)="activateTool(t.id)" [title]="t.label">
+            {{t.icon}}
+          </button>
+        </div>
+        <button class="act-btn" (click)="clearDrawings()" title="Limpiar dibujos">🗑</button>
+        <button class="act-btn" (click)="fitContent()" title="Ajustar (f)">⊞</button>
+        
+        <!-- Toggle AI chat panel -->
+        <button class="act-btn" [class.ai-active]="aiPanelOpen"
+                (click)="toggleAiPanel()" title="Asistente IA">🤖</button>
+        <button class="act-btn currency-toggle" [class.usd-active]="showInUsd"
+                (click)="toggleCurrency()" [title]="showInUsd ? 'Ver en Bs' : 'Ver en USD'">
+          {{showInUsd ? 'USD' : 'Bs'}}
+        </button>
+        <button class="act-btn" (click)="toggleFullscreen()" title="Pantalla completa (F)">
+          {{isFullscreen?'✕':'⛶'}}
+        </button>
+        <button class="act-btn comparison-toggle"
+        [class.comparison-active]="isComparisonMode"
+        (click)="enterComparisonMode()"
+        title="Comparar acciones">⚖️</button>
+        <!-- Create alert for current stock -->
+        <button class="act-btn alert-btn" *ngIf="selectedSymbol"
+                (click)="openCreateAlert()" title="Crear alerta de precio">🔔</button>
+      </div>
+    </div>
+
+    <!-- Alert creation panel -->
+    <div class="alert-panel" *ngIf="alertPanelOpen && selectedSymbol">
+      <div class="ap-header">
+        <span>🔔 Nueva alerta — {{ selectedSymbol }}</span>
+        <button class="ap-close" (click)="alertPanelOpen=false">✕</button>
+      </div>
+      <div class="ap-body">
+        <div class="ap-row">
+          <label>Condición</label>
+          <select class="ap-select" [(ngModel)]="newAlertCondition">
+            <option value="above">📈 Por encima de</option>
+            <option value="below">📉 Por debajo de</option>
+          </select>
+        </div>
+        <div class="ap-row">
+          <label>Precio ({{ currentPrice ? 'actual: ' + (currentPrice | number:'1.2-2') : 'sin precio' }})</label>
+          <input class="ap-input" type="number" [(ngModel)]="newAlertValue" step="0.01" min="0"
+                 placeholder="0.00">
+        </div>
+        <div class="ap-row">
+          <label>Mensaje (opcional)</label>
+          <input class="ap-input" type="text" [(ngModel)]="newAlertMessage"
+                 placeholder="Ej: {{ selectedSymbol }} llegó a mi precio objetivo">
+        </div>
+        <button class="ap-save-btn" (click)="saveAlert()" [disabled]="!newAlertValue || savingAlert">
+          {{ savingAlert ? 'Guardando...' : 'Crear Alerta' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- ── Indicators bar: SOLO indicadores que se dibujan en el gráfico ── -->
+    <div class="ind-bar">
+      <span class="ind-label">Indicadores:</span>
+      <button *ngFor="let ind of indicators" class="ind-btn"
+              [class.active]="ind.enabled" (click)="toggleIndicator(ind)"
+              [style.--c]="ind.color">{{ind.label}}</button>
+      <button class="ind-btn" [class.active]="showVolume"
+              (click)="toggleVolume()" style="--c:#58a6ff">Vol</button>
+      <button class="ind-btn" [class.active]="showAnalytics" (click)="toggleAnalytics()" style="--c:#ffaa66">📊 Analytics</button>
+
+      <span class="msr-pill" *ngIf="measureResult">📏 {{measureResult}}</span>
+      <span class="msr-pill" *ngIf="fibLevels.length">
+        📐 Fib <button class="x-btn" (click)="clearFib()">✕</button>
+      </span>
+    </div>
+
+    <!-- Chart + AI panel row -->
+    <div class="content-row">
+
+      <div class="chart-wrap" *ngIf="selectedSymbol">
+        <div class="overlay-loading" *ngIf="loading">
+          <div class="spin"></div><span>Cargando {{selectedSymbol}}…</span>
+        </div>
+
+        <div #chartContainer class="pane main-pane"></div>
+        <div #volumeContainer class="pane vol-pane" *ngIf="showVolume">
+          <span class="pane-tag">Volumen</span>
+          <!-- FIX: volume value shown from crosshair -->
+          <span class="vol-value" *ngIf="displayCandle">
+            {{displayCandle.volume | number:'1.0-0'}}
+          </span>
+        </div>
+        <div #rsiContainer class="pane rsi-pane" *ngIf="indicators[0].enabled">
+          <span class="pane-tag">RSI(14)</span>
+        </div>
+        <div #macdContainer class="pane macd-pane" *ngIf="indicators[1].enabled">
+          <span class="pane-tag">MACD(12,26,9)</span>
+        </div>
+        <div #obvContainer class="pane sub-pane" *ngIf="indEnabled('obv') || indEnabled('adl')">
+          <span class="pane-tag">OBV {{indEnabled('adl') ? '/ A/D' : ''}}</span>
+        </div>
+        <div #aroonContainer class="pane sub-pane" *ngIf="indEnabled('aroon')">
+          <span class="pane-tag">Aroon(25)</span>
+        </div>
+        <div #stochContainer class="pane sub-pane" *ngIf="indEnabled('stoch')">
+          <span class="pane-tag">Stoch(14,3)</span>
+        </div>
+
+        <div class="fib-panel" *ngIf="fibLevels.length">
+          <div *ngFor="let fib of fibLevels" class="fib-row">
+            <span class="fib-r">{{fib.label}}</span>
+            <span class="fib-p">{{fib.price | number:'1.2-2'}}</span>
+          </div>
+        </div>
+
+        <div class="msr-popup" *ngIf="measurePopup"
+             [style.left.px]="measurePopup.x" [style.top.px]="measurePopup.y">
+          <button class="x-btn abs-x" (click)="measurePopup=null">✕</button>
+          <div class="msr-row">Δ%
+            <b [class.up]="measurePopup.pctChange>=0" [class.dn]="measurePopup.pctChange<0">
+              {{measurePopup.pctChange>=0?'+':''}}{{measurePopup.pctChange | number:'1.2-2'}}%
+            </b>
+          </div>
+          <div class="msr-row">Δ Bs <b>{{measurePopup.absChange | number:'1.4-4'}}</b></div>
+          <div class="msr-row">Barras <b>{{measurePopup.bars}}</b></div>
+          <div class="msr-row">{{measurePopup.from}} → {{measurePopup.to}}</div>
+        </div>
+
+        <!-- Analytics panel: OBV, A/D, Aroon, ADX, Chaikin, ATR%, DMI, Stoch, MFI -->
+        <div class="analytics-panel"
+             *ngIf="showAnalytics && selectedSymbol"
+             [style.left.px]="analyticsPos.x"
+             [style.top.px]="analyticsPos.y"
+             (mousedown)="startDragAnalytics($event)">
+    <div class="analytics-header" style="cursor:move">
+      <span>📊 Indicadores Avanzados</span>
+      <button class="x-btn" (click)="toggleAnalytics(); $event.stopPropagation()">✕</button>
+    </div>
+    <div class="analytics-grid">
+      <div class="analytics-item">
+        <span class="analytics-label">OBV</span>
+        <span class="analytics-value" [class.val-up]="obvValue>0" [class.val-dn]="obvValue<0">{{formatLargeNumber(obvValue)}}</span>
+      </div>
+      <div class="analytics-item">
+        <span class="analytics-label">A/D Line</span>
+        <span class="analytics-value" [class.val-up]="adValue>0" [class.val-dn]="adValue<0">{{formatLargeNumber(adValue)}}</span>
+      </div>
+      <div class="analytics-item">
+        <span class="analytics-label">Aroon Up</span>
+        <span class="analytics-value" [class.val-up]="aroonUp>=70" [class.val-mid]="aroonUp>=30&&aroonUp<70" [class.val-dn]="aroonUp<30">{{aroonUp | number:'1.0-0'}}%</span>
+      </div>
+      <div class="analytics-item">
+        <span class="analytics-label">Aroon Down</span>
+        <span class="analytics-value" [class.val-up]="aroonDown<30" [class.val-mid]="aroonDown>=30&&aroonDown<70" [class.val-dn]="aroonDown>=70">{{aroonDown | number:'1.0-0'}}%</span>
+      </div>
+      <div class="analytics-item">
+        <span class="analytics-label">ADX</span>
+        <span class="analytics-value" [class.val-up]="adxValue>25" [class.val-mid]="adxValue>=15&&adxValue<=25" [class.val-dn]="adxValue<15">
+          {{adxValue | number:'1.1-1'}} <span class="analytics-badge">{{adxValue>25?'TENDENCIA':'RANGO'}}</span>
+        </span>
+      </div>
+      <div class="analytics-item">
+        <span class="analytics-label">Chaikin Osc</span>
+        <span class="analytics-value" [class.val-up]="chaikinValue>0" [class.val-dn]="chaikinValue<0">{{formatLargeNumber(chaikinValue)}}</span>
+      </div>
+      <div class="analytics-item">
+        <span class="analytics-label">ATR %</span>
+        <span class="analytics-value" [class.val-up]="atrPercent>5" [class.val-mid]="atrPercent>=2&&atrPercent<=5" [class.val-dn]="atrPercent<2">{{atrPercent | number:'1.2-2'}}%</span>
+      </div>
+      <div class="analytics-item">
+        <span class="analytics-label">DMI</span>
+        <span class="analytics-value" [class.val-up]="dmiValue>50" [class.val-dn]="dmiValue<50">{{dmiValue | number:'1.1-1'}}</span>
+      </div>
+      <div class="analytics-item">
+        <span class="analytics-label">Stoch %K</span>
+        <span class="analytics-value" [class.val-dn]="stochValue>80" [class.val-up]="stochValue<20" [class.val-mid]="stochValue>=20&&stochValue<=80">
+          {{stochValue | number:'1.1-1'}}% <span class="analytics-badge">{{stochValue>80?'SOBRECOMPRA':stochValue<20?'SOBREVENTA':''}}</span>
+        </span>
+      </div>
+      <div class="analytics-item">
+        <span class="analytics-label">MFI Smart$</span>
+        <span class="analytics-value" [class.val-dn]="mfiValue>80" [class.val-up]="mfiValue<20" [class.val-mid]="mfiValue>=20&&mfiValue<=80">
+          {{mfiValue | number:'1.1-1'}} <span class="analytics-badge">{{mfiValue>80?'DIST.':mfiValue<20?'ACUM.':''}}</span>
+        </span>
+      </div>
+    </div>
+    <div class="analytics-aroon-interp">
+      <span class="analytics-label">Aroon: </span>
+      <span class="analytics-value"
+        [class.val-up]="aroonUp>=70&&aroonDown<30"
+        [class.val-dn]="aroonDown>=70&&aroonUp<30"
+        [class.val-mid]="!(aroonUp>=70||aroonDown>=70)">
+        {{aroonUp>=70&&aroonDown<30?'▲ ALCISTA FUERTE':
+          aroonDown>=70&&aroonUp<30?'▼ BAJISTA FUERTE':
+          aroonUp>50&&aroonDown<50?'↗ ALCISTA':
+          aroonDown>50&&aroonUp<50?'↘ BAJISTA':'⟷ CONSOLIDACIÓN'}}
+      </span>
+    </div>
+  </div>
+      </div>
+
+      <div class="empty-state" *ngIf="!selectedSymbol&&!loading">
+        <div class="es-ico">📊</div>
+        <h2>Selecciona una acción</h2>
+        <p>Elige cualquier acción activa de la BVC del panel izquierdo para ver su gráfico de velas</p>
+        <div class="es-chips">
+          <span>🕯 Velas japonesas</span><span>📐 Fibonacci</span>
+          <span>📏 Medición</span><span>📈 RSI · MACD · EMA · BB</span>
+          <span>🔍 Zoom &amp; Pan</span><span>🤖 IA integrada</span>
+        </div>
+      </div>
+      
+
+      <!-- ── AI Chat Panel (inline, beside chart) ───────────────────── -->
+      <app-ai-chart-panel
+  *ngIf="selectedSymbol && currentChartIndicators"
+  [symbol]="selectedSymbol"
+  [symbolName]="selectedName"
+  [chartContext]="currentChartContext"
+  [orderBook]="currentOrderBook"
+  [isOpen]="aiPanelOpen"
+  [availableStocks]="stocks"
+  [showInUsd]="showInUsd"
+  (closePanel)="closePanelAndResize()">
+</app-ai-chart-panel>
+
+    </div><!-- /content-row -->
+
+  </div><!-- /main-area -->
+</div>

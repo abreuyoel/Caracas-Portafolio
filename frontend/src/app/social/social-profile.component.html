@@ -1,0 +1,342 @@
+<div class="sp-container">
+
+  <!-- Toolbar -->
+  <header class="sp-toolbar">
+    <button mat-icon-button routerLink="/dashboard" class="back-btn" matTooltip="Volver">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <div class="sp-toolbar__title">
+      <span class="eyebrow">Caracas Portafolio</span>
+      <h1>Red de Inversores</h1>
+    </div>
+    <span class="spacer"></span>
+    <div class="privacy-note" matTooltip="Identidad protegida. Tus datos están a salvo bajo el principio de Habeas Data (CRBV Art. 28).">
+      <mat-icon>shield</mat-icon>
+      <span>Privacidad Protegida · CRBV</span>
+    </div>
+  </header>
+
+  @if (loading) {
+    <div class="sp-loading">
+      <mat-spinner diameter="40" strokeWidth="3"></mat-spinner>
+      <p>Cargando perfil…</p>
+    </div>
+  } @else {
+
+    <!-- Tabs -->
+    <div class="sp-tabs">
+      <button class="sp-tab" [class.active]="activeTab==='my-profile'" (click)="selectTab('my-profile')">
+        <mat-icon>person</mat-icon> Mi Perfil
+      </button>
+      <button class="sp-tab" [class.active]="activeTab==='feed'" (click)="selectTab('feed')">
+        <mat-icon>public</mat-icon> Explorar Red
+      </button>
+      <button class="sp-tab" [class.active]="activeTab==='followers'" (click)="selectTab('followers')">
+        <mat-icon>group</mat-icon> Seguidores
+      </button>
+      <button class="sp-tab" [class.active]="activeTab==='following'" (click)="selectTab('following')">
+        <mat-icon>person_add</mat-icon> Siguiendo
+      </button>
+    </div>
+
+    <!-- ── MY PROFILE ──────────────────────────────────────────────────────── -->
+    @if (activeTab === 'my-profile') {
+      <div class="sp-content">
+
+        @if (!editMode && profile) {
+          <!-- Profile card view -->
+          <div class="profile-card">
+            <div class="pc-avatar">
+              <span class="avatar-letter">{{ avatarLetter(profile.alias) }}</span>
+              <span class="visibility-chip" [class.public]="profile.is_public" [class.private]="!profile.is_public">
+                <mat-icon>{{ profile.is_public ? 'public' : 'lock' }}</mat-icon>
+                {{ profile.is_public ? 'Público' : 'Privado' }}
+              </span>
+            </div>
+            <div class="pc-info">
+              <h2 class="pc-alias">&#64;{{ profile.alias }}</h2>
+              <p class="pc-bio">{{ profile.bio || 'Sin bio aún.' }}</p>
+              <div class="pc-perms">
+                @if (profile.show_capital_initial) { <span class="perm-chip">Capital inicial</span> }
+                @if (profile.show_current_value)   { <span class="perm-chip">Valor actual</span> }
+                @if (profile.show_pnl)             { <span class="perm-chip">P&L</span> }
+                @if (profile.show_transactions)    { <span class="perm-chip">Transacciones</span> }
+                @if (profile.show_holdings)        { <span class="perm-chip">Posiciones</span> }
+                @if (profile.show_top_positions)   { <span class="perm-chip">Top posiciones</span> }
+                @if (profile.notify_on_transaction){ <span class="perm-chip perm-chip--notify">Notifica en tx</span> }
+              </div>
+            </div>
+            <div class="pc-actions">
+              <button mat-stroked-button class="edit-btn" (click)="editMode=true; form={...profile!}">
+                <mat-icon>edit</mat-icon> Editar
+              </button>
+              <button mat-stroked-button class="delete-btn" (click)="deleteProfile()">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+          </div>
+        }
+
+        <!-- Create / Edit form -->
+        @if (editMode) {
+          <div class="sp-form-card">
+            <div class="form-header">
+              <mat-icon>person_pin</mat-icon>
+              <div>
+                <h2>{{ profile ? 'Editar Perfil' : 'Crear tu Perfil de Red' }}</h2>
+                <p class="form-sub">Tu <strong>alias</strong> es lo único visible para otros usuarios. Tu nombre real y email nunca se comparten.</p>
+              </div>
+            </div>
+
+            <!-- Privacy alert -->
+            <div class="privacy-alert">
+              <mat-icon>info</mat-icon>
+              <p>
+                <strong>¿Es esto legal?</strong> Sí. Bajo la <strong>Constitución de la República Bolivariana de Venezuela (Arts. 28 y 60)</strong>,
+                tienes derecho a la vida privada y a la autodeterminación informativa. Al usar un <strong>alias anónimo</strong>,
+                tú decides voluntariamente qué información compartir. Puedes eliminar tu perfil en cualquier momento.
+              </p>
+            </div>
+
+            <div class="form-grid">
+              <div class="form-group form-group--full">
+                <label>Alias público <span class="req">*</span></label>
+                <div class="alias-input-wrap">
+                  <span class="at-sign">&#64;</span>
+                  <input class="sp-input" [(ngModel)]="form.alias" placeholder="ej: inversor_bvc_2026"
+                         maxlength="40" autocomplete="off">
+                </div>
+                @if (aliasError) { <span class="input-error">{{ aliasError }}</span> }
+                <span class="input-hint">Solo letras, números, _ . - · 3–40 caracteres · No puede ser tu nombre real</span>
+              </div>
+
+              <div class="form-group form-group--full">
+                <label>Bio (opcional)</label>
+                <textarea class="sp-textarea" [(ngModel)]="form.bio" placeholder="Ej: Inversor venezolano. Largo plazo, sector bancario."
+                          maxlength="280" rows="2"></textarea>
+                <div class="input-hint-row">
+                   <span class="input-hint">{{ form.bio.length }}/280</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Visibility -->
+            <div class="toggle-section">
+              <h3>Visibilidad del perfil</h3>
+              <div class="toggle-row">
+                <div class="toggle-info">
+                  <span class="toggle-label">Perfil público</span>
+                  <span class="toggle-sub">Apareces en la red de Caracas Portafolio. Si está apagado, eres invisible.</span>
+                </div>
+                <mat-slide-toggle [(ngModel)]="form.is_public" color="accent"></mat-slide-toggle>
+              </div>
+            </div>
+
+            <!-- Data permissions -->
+            @if (form.is_public) {
+              <div class="toggle-section">
+                <h3>¿Qué pueden ver tus seguidores?</h3>
+                <p class="perm-warning">
+                  <mat-icon>warning_amber</mat-icon>
+                  Compartir datos de trading puede revelar tus estrategias de inversión. Activa solo lo que estés cómodo mostrando.
+                </p>
+
+                <div class="toggle-row">
+                  <div class="toggle-info">
+                    <span class="toggle-label">Capital inicial invertido</span>
+                    <span class="toggle-sub">Total en USD que has invertido históricamente</span>
+                  </div>
+                  <mat-slide-toggle [(ngModel)]="form.show_capital_initial" color="primary"></mat-slide-toggle>
+                </div>
+
+                <div class="toggle-row">
+                  <div class="toggle-info">
+                    <span class="toggle-label">Valor actual del portafolio</span>
+                    <span class="toggle-sub">Valor de mercado de tus posiciones abiertas</span>
+                  </div>
+                  <mat-slide-toggle [(ngModel)]="form.show_current_value" color="primary"></mat-slide-toggle>
+                </div>
+
+                <div class="toggle-row">
+                  <div class="toggle-info">
+                    <span class="toggle-label">P&L total (ganancias/pérdidas)</span>
+                    <span class="toggle-sub">Rendimiento neto en USD</span>
+                  </div>
+                  <mat-slide-toggle [(ngModel)]="form.show_pnl" color="primary"></mat-slide-toggle>
+                </div>
+
+                <div class="toggle-row">
+                  <div class="toggle-info">
+                    <span class="toggle-label">Top posiciones</span>
+                    <span class="toggle-sub">Tus 3 mayores posiciones (solo símbolo, sin monto)</span>
+                  </div>
+                  <mat-slide-toggle [(ngModel)]="form.show_top_positions" color="primary"></mat-slide-toggle>
+                </div>
+
+                <div class="toggle-row">
+                  <div class="toggle-info">
+                    <span class="toggle-label">Posiciones abiertas completas</span>
+                    <span class="toggle-sub">Símbolo + cantidad de cada posición abierta</span>
+                  </div>
+                  <mat-slide-toggle [(ngModel)]="form.show_holdings" color="primary"></mat-slide-toggle>
+                </div>
+
+                <!-- Selective Visibility -->
+                @if (form.show_holdings && allStocks.length > 0) {
+                  <div class="selective-stocks">
+                    <p class="selective-label">Selecciona qué acciones mostrar específicamente:</p>
+                    <div class="stocks-chips">
+                      @for (s of allStocks; track s) {
+                        <button class="stock-chip" [class.active]="isStockVisible(s)" (click)="toggleStock(s)">
+                          <mat-icon>{{ isStockVisible(s) ? 'check_circle' : 'add_circle_outline' }}</mat-icon>
+                          {{ s }}
+                        </button>
+                      }
+                    </div>
+                    <p class="selective-hint" *ngIf="form.visible_symbols.length === 0">
+                      Si no seleccionas ninguna, se mostrarán todas por defecto.
+                    </p>
+                  </div>
+                }
+
+                <div class="toggle-row">
+                  <div class="toggle-info">
+                    <span class="toggle-label">Historial de transacciones</span>
+                    <span class="toggle-sub">Lista de compras y ventas (sin casa de bolsa)</span>
+                  </div>
+                  <mat-slide-toggle [(ngModel)]="form.show_transactions" color="primary"></mat-slide-toggle>
+                </div>
+
+                <div class="toggle-row toggle-row--notify">
+                  <div class="toggle-info">
+                    <span class="toggle-label">Notificar a seguidores en nueva transacción</span>
+                    <span class="toggle-sub">Tus seguidores recibirán una notificación cuando registres una operación</span>
+                  </div>
+                  <mat-slide-toggle [(ngModel)]="form.notify_on_transaction" color="warn"></mat-slide-toggle>
+                </div>
+              </div>
+            }
+
+            <!-- Legal Consent for New Profiles -->
+            <div class="legal-consent-section" *ngIf="!profile">
+              <mat-checkbox [(ngModel)]="form.accepted_terms" color="primary">
+                He leído y acepto los 
+                <a href="javascript:void(0)" (click)="showTerms($event)" class="legal-link">Términos de Servicio</a> 
+                y la 
+                <a href="javascript:void(0)" (click)="showPrivacy($event)" class="legal-link">Política de Privacidad</a>.
+              </mat-checkbox>
+              <p class="consent-detail">Al activar esta casilla, confirmas que comprendes cómo se manejan tus datos y el alcance de las medidas de seguridad implementadas.</p>
+            </div>
+
+            <!-- Form actions -->
+            <div class="form-actions">
+              @if (profile) {
+                <button mat-stroked-button class="cancel-btn" (click)="editMode=false">Cancelar</button>
+              }
+              <button mat-raised-button class="save-btn" (click)="saveProfile()" [disabled]="saving">
+                <mat-spinner *ngIf="saving" diameter="18" strokeWidth="2"></mat-spinner>
+                <mat-icon *ngIf="!saving">save</mat-icon>
+                {{ saving ? 'Guardando…' : (profile ? 'Guardar cambios' : 'Crear perfil') }}
+              </button>
+            </div>
+          </div>
+        }
+
+      </div>
+    }
+
+    <!-- ── FEED ────────────────────────────────────────────────────────────── -->
+    @if (activeTab === 'feed') {
+      <div class="sp-content">
+        <div class="feed-header">
+          <h2>Inversores en la Red Caracas Portafolio</h2>
+          <p>Perfiles públicos de la comunidad. Los datos mostrados son solo los que cada inversor eligió compartir voluntariamente.</p>
+        </div>
+        @if (feedLoading) {
+          <div class="sp-loading"><mat-spinner diameter="32"></mat-spinner></div>
+        } @else if (feed.length === 0) {
+          <div class="empty-state">
+            <mat-icon>group_off</mat-icon>
+            <p>Aún no hay perfiles públicos en la red.</p>
+            <small>Crea tu perfil y activa "Perfil público" para aparecer aquí.</small>
+          </div>
+        } @else {
+          <div class="feed-grid">
+            @for (p of feed; track p.alias) {
+              <div class="feed-card">
+                <div class="fc-avatar">{{ avatarLetter(p.alias) }}</div>
+                <div class="fc-info">
+                  <span class="fc-alias">&#64;{{ p.alias }}</span>
+                  <span class="fc-bio">{{ p.bio || '—' }}</span>
+                  <span class="fc-since">Miembro desde {{ p.created_at | date:'MMM yyyy' }}</span>
+                </div>
+                <button mat-stroked-button class="follow-btn" 
+                        [class.following]="p.is_followed"
+                        (click)="!p.is_followed && follow(p.alias)"
+                        [disabled]="p.is_followed"
+                        [matTooltip]="p.is_followed ? 'Ya sigues a este perfil' : 'Seguir a @' + p.alias">
+                  <mat-icon>{{ p.is_followed ? 'check' : 'person_add' }}</mat-icon> 
+                  {{ p.is_followed ? 'Siguiendo' : 'Seguir' }}
+                </button>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
+
+    <!-- ── FOLLOWERS ───────────────────────────────────────────────────────── -->
+    @if (activeTab === 'followers') {
+      <div class="sp-content">
+        <h2 class="list-title">Tus Seguidores</h2>
+        @if (followers.length === 0) {
+          <div class="empty-state">
+            <mat-icon>person_outline</mat-icon>
+            <p>Aún no tienes seguidores. Activa tu perfil público para ser descubierto.</p>
+          </div>
+        } @else {
+          <div class="follow-list">
+            @for (f of followers; track f.alias) {
+              <div class="follow-row">
+                <div class="fr-avatar">{{ avatarLetter(f.alias) }}</div>
+                <div class="fr-info">
+                  <span class="fr-alias">&#64;{{ f.alias }}</span>
+                  <span class="fr-bio">{{ f.bio || '—' }}</span>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
+
+    <!-- ── FOLLOWING ──────────────────────────────────────────────────────── -->
+    @if (activeTab === 'following') {
+      <div class="sp-content">
+        <h2 class="list-title">Perfiles que sigues</h2>
+        @if (following.length === 0) {
+          <div class="empty-state">
+            <mat-icon>explore</mat-icon>
+            <p>No sigues a nadie aún. Explora la red para encontrar inversores.</p>
+          </div>
+        } @else {
+          <div class="follow-list">
+            @for (f of following; track f.alias) {
+              <div class="follow-row">
+                <div class="fr-avatar">{{ avatarLetter(f.alias) }}</div>
+                <div class="fr-info">
+                  <span class="fr-alias">&#64;{{ f.alias }}</span>
+                  <span class="fr-bio">{{ f.bio || '—' }}</span>
+                </div>
+                <button mat-stroked-button class="unfollow-btn" (click)="unfollow(f.alias)">
+                  Dejar de seguir
+                </button>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
+
+  }
+</div>

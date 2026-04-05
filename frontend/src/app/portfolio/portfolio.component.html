@@ -1,0 +1,393 @@
+<div class="pf-container">
+
+  <!-- Loading -->
+  @if (loading) {
+    <div class="pf-loading">
+      <mat-spinner diameter="48" strokeWidth="3"></mat-spinner>
+      <p>Analizando tu portafolio…</p>
+    </div>
+  }
+
+  @if (!loading && data) {
+    <!-- Toolbar -->
+    <header class="pf-toolbar">
+      <button mat-icon-button routerLink="/dashboard" class="back-btn" matTooltip="Volver al inicio">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+      <div class="pf-toolbar__title">
+        <span class="eyebrow">Bolsa de Caracas</span>
+        <h1>Análisis de Portafolio</h1>
+      </div>
+      <span class="spacer"></span>
+      <div class="toolbar-badge">
+        <mat-icon>verified</mat-icon>
+        <span>WAC · Costo Promedio Ponderado</span>
+      </div>
+      @if (data.summary.bcv_rate) {
+        <div class="bcv-pill">
+          <span class="bcv-label">BCV</span>
+          <span class="bcv-rate">Bs {{ data.summary.bcv_rate | number:'1.2-2' }} / $</span>
+        </div>
+      }
+    </header>
+
+    <!-- ── KPI Cards ──────────────────────────────────────────────────────── -->
+    <section class="kpi-grid">
+      <div class="kpi-card kpi-card--primary">
+        <div class="kpi-icon">📊</div>
+        <div class="kpi-body">
+          <span class="kpi-label">Capital Invertido</span>
+          <span class="kpi-value">${{ data.summary.total_invested_usd | number:'1.2-2' }}</span>
+          <span class="kpi-sub">{{ data.performance_by_stock.length }} símbolo(s)</span>
+        </div>
+      </div>
+
+      <div class="kpi-card" [class.kpi-up]="totalPnl >= 0" [class.kpi-dn]="totalPnl < 0">
+        <div class="kpi-icon">{{ totalPnl >= 0 ? '📈' : '📉' }}</div>
+        <div class="kpi-body">
+          <span class="kpi-label">P&L Total</span>
+          <span class="kpi-value" [class.txt-up]="totalPnl >= 0" [class.txt-dn]="totalPnl < 0">
+            {{ totalPnl >= 0 ? '+' : '' }}${{ totalPnl | number:'1.2-2' }}
+          </span>
+          <span class="kpi-sub" [class.txt-up]="totalPnlPct >= 0" [class.txt-dn]="totalPnlPct < 0">
+            {{ totalPnlPct >= 0 ? '+' : '' }}{{ totalPnlPct | number:'1.1-1' }}% ROI
+          </span>
+        </div>
+      </div>
+
+      <div class="kpi-card" [class.kpi-up]="data.summary.total_realized_pnl >= 0" [class.kpi-dn]="data.summary.total_realized_pnl < 0">
+        <div class="kpi-icon">💵</div>
+        <div class="kpi-body">
+          <span class="kpi-label">Ganancia Realizada</span>
+          <span class="kpi-value" [class.txt-up]="data.summary.total_realized_pnl >= 0" [class.txt-dn]="data.summary.total_realized_pnl < 0">
+            {{ data.summary.total_realized_pnl >= 0 ? '+' : '' }}${{ data.summary.total_realized_pnl | number:'1.2-2' }}
+          </span>
+          <span class="kpi-sub">Ventas cerradas</span>
+        </div>
+      </div>
+
+      <div class="kpi-card" [class.kpi-up]="data.summary.total_unrealized_pnl >= 0" [class.kpi-dn]="data.summary.total_unrealized_pnl < 0">
+        <div class="kpi-icon">🎯</div>
+        <div class="kpi-body">
+          <span class="kpi-label">Plusvalía Latente</span>
+          <span class="kpi-value" [class.txt-up]="data.summary.total_unrealized_pnl >= 0" [class.txt-dn]="data.summary.total_unrealized_pnl < 0">
+            {{ data.summary.total_unrealized_pnl >= 0 ? '+' : '' }}${{ data.summary.total_unrealized_pnl | number:'1.2-2' }}
+          </span>
+          <span class="kpi-sub">Posiciones abiertas</span>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-icon">🔄</div>
+        <div class="kpi-body">
+          <span class="kpi-label">Operaciones</span>
+          <span class="kpi-value">{{ data.summary.total_buys + data.summary.total_sells }}</span>
+          <span class="kpi-sub">{{ data.summary.total_buys }} compras · {{ data.summary.total_sells }} ventas</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Spotlight row (best/worst positions) ───────────────────────────── -->
+    <section class="spotlight-grid">
+      @if (data.insights.top_holding_gain) {
+        <div class="spot-card spot-card--win">
+          <div class="spot-icon"><mat-icon>emoji_events</mat-icon></div>
+          <div class="spot-body">
+            <span class="spot-eyebrow">Mejor Compra Actual</span>
+            <span class="spot-symbol">{{ data.insights.top_holding_gain.symbol }}</span>
+            <span class="spot-value txt-up">+${{ data.insights.top_holding_gain.unrealized_pnl | number:'1.2-2' }} latente</span>
+            <span class="spot-sub">{{ data.insights.top_holding_gain.gain_pct >= 0 ? '+' : '' }}{{ data.insights.top_holding_gain.gain_pct | number:'1.1-1' }}% ROI · {{ data.insights.top_holding_gain.quantity | number }} acciones</span>
+          </div>
+        </div>
+      }
+      @if (data.insights.worst_holding) {
+        <div class="spot-card spot-card--loss">
+          <div class="spot-icon"><mat-icon>trending_down</mat-icon></div>
+          <div class="spot-body">
+            <span class="spot-eyebrow">Mayor Pérdida Latente</span>
+            <span class="spot-symbol">{{ data.insights.worst_holding.symbol }}</span>
+            <span class="spot-value txt-dn">${{ data.insights.worst_holding.unrealized_pnl | number:'1.2-2' }}</span>
+            <span class="spot-sub">{{ data.insights.worst_holding.gain_pct | number:'1.1-1' }}% ROI · {{ data.insights.worst_holding.quantity | number }} acciones</span>
+          </div>
+        </div>
+      }
+      @if (data.insights.best_sell) {
+        <div class="spot-card spot-card--sell">
+          <div class="spot-icon"><mat-icon>price_check</mat-icon></div>
+          <div class="spot-body">
+            <span class="spot-eyebrow">Mejor Venta Realizada</span>
+            <span class="spot-symbol">{{ data.insights.best_sell.symbol }}</span>
+            <span class="spot-value txt-up">+${{ data.insights.best_sell.realized_pnl | number:'1.2-2' }}</span>
+            <span class="spot-sub">Ganancia neta acumulada en ventas</span>
+          </div>
+        </div>
+      }
+      @if (data.insights.worst_sell) {
+        <div class="spot-card spot-card--loss">
+          <div class="spot-icon"><mat-icon>warning_amber</mat-icon></div>
+          <div class="spot-body">
+            <span class="spot-eyebrow">Peor Venta Realizada</span>
+            <span class="spot-symbol">{{ data.insights.worst_sell.symbol }}</span>
+            <span class="spot-value txt-dn">${{ data.insights.worst_sell.realized_pnl | number:'1.2-2' }}</span>
+            <span class="spot-sub">Pérdida neta acumulada en ventas</span>
+          </div>
+        </div>
+      }
+      @if (data.insights.best_gain_day) {
+        <div class="spot-card spot-card--day">
+          <div class="spot-icon"><mat-icon>bolt</mat-icon></div>
+          <div class="spot-body">
+            <span class="spot-eyebrow">Mejor Día de Ganancias</span>
+            <span class="spot-symbol">{{ data.insights.best_gain_day[0] | date:'mediumDate' }}</span>
+            <span class="spot-value txt-up">+${{ data.insights.best_gain_day[1] | number:'1.2-2' }}</span>
+            <span class="spot-sub">Máxima ganancia realizada en un solo día</span>
+          </div>
+        </div>
+      }
+      @if (data.insights.worst_gain_day) {
+        <div class="spot-card spot-card--loss">
+          <div class="spot-icon"><mat-icon>thunderstorm</mat-icon></div>
+          <div class="spot-body">
+            <span class="spot-eyebrow">Peor Día de Pérdidas</span>
+            <span class="spot-symbol">{{ data.insights.worst_gain_day[0] | date:'mediumDate' }}</span>
+            <span class="spot-value txt-dn">${{ data.insights.worst_gain_day[1] | number:'1.2-2' }}</span>
+            <span class="spot-sub">Máxima pérdida realizada en un solo día</span>
+          </div>
+        </div>
+      }
+    </section>
+
+    <!-- ── Charts row 1: Timeline + Allocation ───────────────────────────── -->
+    <section class="charts-grid charts-grid--main">
+      <div class="chart-card chart-card--timeline">
+        <div class="chart-header">
+          <div>
+            <h3>Flujo de Inversión Histórico</h3>
+            <p class="chart-sub">Inversión acumulada en USD a lo largo del tiempo</p>
+          </div>
+          <div class="interval-pills">
+            <button [class.active]="currentInterval==='daily'"   (click)="setInterval('daily')">Día</button>
+            <button [class.active]="currentInterval==='weekly'"  (click)="setInterval('weekly')">Semana</button>
+            <button [class.active]="currentInterval==='monthly'" (click)="setInterval('monthly')">Mes</button>
+          </div>
+        </div>
+        <div class="canvas-wrap"><canvas #timelineChart></canvas></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <h3>Composición de Cartera</h3>
+            <p class="chart-sub">Distribución por símbolo (USD invertido)</p>
+          </div>
+        </div>
+        <div class="canvas-wrap"><canvas #allocChart></canvas></div>
+      </div>
+    </section>
+
+    <!-- ── Charts row 2: P&L per stock + Order types ─────────────────────── -->
+    <section class="charts-grid charts-grid--sub">
+      <div class="chart-card chart-card--pnl">
+        <div class="chart-header">
+          <div>
+            <h3>P&L Total por Acción</h3>
+            <p class="chart-sub">Ganancia o pérdida neta (realizado + latente)</p>
+          </div>
+        </div>
+        <div class="canvas-wrap canvas-wrap--tall"><canvas #pnlChart></canvas></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <h3>Tipo de Orden</h3>
+            <p class="chart-sub">Mercado vs Límite</p>
+          </div>
+        </div>
+        <div class="canvas-wrap"><canvas #orderChart></canvas></div>
+        <div class="order-stats">
+          @for (entry of (data.summary.request_types | keyvalue); track entry.key) {
+            <div class="order-stat">
+              <span class="os-label">{{ entry.key }}</span>
+              <span class="os-val">{{ entry.value }}</span>
+            </div>
+          }
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Charts row 3: Brokers + Buy/Sell activity ──────────────────────── -->
+    <section class="charts-grid charts-grid--sub">
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <h3>Volumen por Casa de Bolsa</h3>
+            <p class="chart-sub">USD total operado por intermediario</p>
+          </div>
+        </div>
+        <div class="canvas-wrap"><canvas #brokerChart></canvas></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <h3>Actividad de Transacciones</h3>
+            <p class="chart-sub">Número de compras y ventas por símbolo</p>
+          </div>
+        </div>
+        <div class="canvas-wrap"><canvas #activityChart></canvas></div>
+      </div>
+    </section>
+
+    <!-- ── Performance Table ─────────────────────────────────────────────── -->
+    <section class="table-section">
+      <div class="section-header-row">
+        <div>
+          <h2>Análisis Individual por Símbolo</h2>
+          <p class="section-sub">Rendimiento completo de cada posición (método WAC)</p>
+        </div>
+        <div class="badge-row">
+          <span class="count-tag"><mat-icon>shopping_cart</mat-icon>{{ data.summary.total_buys }} Compras</span>
+          <span class="count-tag count-tag--sell"><mat-icon>sell</mat-icon>{{ data.summary.total_sells }} Ventas</span>
+        </div>
+      </div>
+      <div class="table-container">
+        <table class="pf-table">
+          <thead>
+            <tr>
+              <th>Acción</th>
+              <th class="center">Compras</th>
+              <th class="center">Ventas</th>
+              <th class="center">Qty Actual</th>
+              <th class="right">Invertido $</th>
+              <th class="right">Valor Actual $</th>
+              <th class="right">Realizado $</th>
+              <th class="right">Latente $</th>
+              <th class="right">P&L Total $</th>
+              <th class="center">ROI</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (s of data.performance_by_stock; track s.symbol) {
+              <tr>
+                <td>
+                  <div class="sym-cell">
+                    <span class="sym-box">{{ s.symbol }}</span>
+                  </div>
+                </td>
+                <td class="center muted">{{ s.buy_count }}</td>
+                <td class="center muted">{{ s.sell_count }}</td>
+                <td class="center mono">{{ s.quantity | number }}</td>
+                <td class="right mono">${{ s.total_invested | number:'1.2-2' }}</td>
+                <td class="right mono" [class.txt-up]="s.current_value > s.total_invested" [class.txt-dn]="s.current_value < s.total_invested && s.current_value > 0">
+                  {{ s.current_value > 0 ? ('$' + (s.current_value | number:'1.2-2')) : '—' }}
+                </td>
+                <td class="right mono" [class.txt-up]="s.realized_pnl > 0" [class.txt-dn]="s.realized_pnl < 0">
+                  {{ s.realized_pnl !== 0 ? ((s.realized_pnl > 0 ? '+' : '') + '$' + (s.realized_pnl | number:'1.2-2')) : '—' }}
+                </td>
+                <td class="right mono" [class.txt-up]="s.unrealized_pnl > 0" [class.txt-dn]="s.unrealized_pnl < 0">
+                  {{ s.quantity > 0 ? ((s.unrealized_pnl >= 0 ? '+' : '') + '$' + (s.unrealized_pnl | number:'1.2-2')) : '—' }}
+                </td>
+                <td class="right mono bold" [class.txt-up]="s.total_pnl > 0" [class.txt-dn]="s.total_pnl < 0">
+                  {{ s.total_pnl >= 0 ? '+' : '' }}${{ s.total_pnl | number:'1.2-2' }}
+                </td>
+                <td class="center">
+                  <span class="roi-chip" [class.roi-up]="s.gain_pct >= 0" [class.roi-dn]="s.gain_pct < 0">
+                    {{ s.gain_pct >= 0 ? '▲' : '▼' }} {{ Math.abs(s.gain_pct) | number:'1.1-1' }}%
+                  </span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── Top Tenencias (no vendidas) ───────────────────────────────────── -->
+    @if (data.insights.top_holdings && data.insights.top_holdings.length > 0) {
+      <section class="top-holdings-section">
+        <div class="section-header-row">
+          <div>
+            <h2>Top Tenencias Actuales</h2>
+            <p class="section-sub">Posiciones abiertas ordenadas por plusvalía latente en USD</p>
+          </div>
+        </div>
+        <div class="holdings-grid">
+          @for (h of data.insights.top_holdings; track h.symbol; let i = $index) {
+            <div class="holding-card" [class.holding-win]="h.unrealized_pnl >= 0" [class.holding-loss]="h.unrealized_pnl < 0">
+              <div class="holding-rank">#{{ i + 1 }}</div>
+              <div class="holding-sym">{{ h.symbol }}</div>
+              <div class="holding-qty">{{ h.quantity | number }} acciones</div>
+              <div class="holding-pnl" [class.txt-up]="h.unrealized_pnl >= 0" [class.txt-dn]="h.unrealized_pnl < 0">
+                {{ h.unrealized_pnl >= 0 ? '+' : '' }}${{ h.unrealized_pnl | number:'1.2-2' }}
+              </div>
+              <div class="holding-roi" [class.txt-up]="h.gain_pct >= 0" [class.txt-dn]="h.gain_pct < 0">
+                {{ h.gain_pct >= 0 ? '+' : '' }}{{ h.gain_pct | number:'1.1-1' }}% ROI
+              </div>
+              <div class="holding-invested">Invertido: ${{ h.total_invested | number:'1.2-2' }}</div>
+            </div>
+          }
+        </div>
+      </section>
+    }
+
+    <!-- ── Insights adicionales ───────────────────────────────────────────── -->
+    <section class="insights-section">
+      <h2>Puntos Clave del Portafolio</h2>
+      <div class="insights-grid">
+        @if (data.insights.best_position) {
+          <div class="insight-card insight-card--gold">
+            <div class="ic-icon"><mat-icon>emoji_events</mat-icon></div>
+            <div class="ic-body">
+              <span class="ic-label">Líder de Rentabilidad (Total)</span>
+              <span class="ic-main">{{ data.insights.best_position.symbol }}</span>
+              <span class="ic-sub">+${{ data.insights.best_position.gain_usd | number:'1.2-2' }} de P&L neto acumulado</span>
+            </div>
+          </div>
+        }
+        @if (data.insights.worst_position) {
+          <div class="insight-card insight-card--red">
+            <div class="ic-icon"><mat-icon>warning</mat-icon></div>
+            <div class="ic-body">
+              <span class="ic-label">Mayor Detractor (Total)</span>
+              <span class="ic-main">{{ data.insights.worst_position.symbol }}</span>
+              <span class="ic-sub">${{ data.insights.worst_position.loss_usd | number:'1.2-2' }} de P&L neto acumulado</span>
+            </div>
+          </div>
+        }
+        @if (data.insights.top_holding_pct) {
+          <div class="insight-card insight-card--purple">
+            <div class="ic-icon"><mat-icon>leaderboard</mat-icon></div>
+            <div class="ic-body">
+              <span class="ic-label">Mejor Tenencia por ROI %</span>
+              <span class="ic-main">{{ data.insights.top_holding_pct.symbol }}</span>
+              <span class="ic-sub">{{ data.insights.top_holding_pct.gain_pct | number:'1.1-1' }}% rendimiento sobre capital</span>
+            </div>
+          </div>
+        }
+        @if (data.insights.best_day) {
+          <div class="insight-card insight-card--blue">
+            <div class="ic-icon"><mat-icon>calendar_today</mat-icon></div>
+            <div class="ic-body">
+              <span class="ic-label">Día de Mayor Inversión</span>
+              <span class="ic-main">{{ data.insights.best_day[0] | date:'mediumDate' }}</span>
+              <span class="ic-sub">${{ data.insights.best_day[1] | number:'1.2-2' }} invertidos en un día</span>
+            </div>
+          </div>
+        }
+      </div>
+    </section>
+  }
+
+  @if (!loading && !data) {
+    <div class="pf-empty">
+      <mat-icon>inbox</mat-icon>
+      <h2>Sin datos de portafolio</h2>
+      <p>Registra tu primera transacción para comenzar el análisis.</p>
+      <button mat-raised-button color="primary" routerLink="/transactions/new">
+        <mat-icon>add</mat-icon> Nueva Transacción
+      </button>
+    </div>
+  }
+
+</div>

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bienvenido a Caracas Portafolio</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #080d18; margin: 0; padding: 0; color: #ffffff; }
+        .container { max-width: 600px; margin: 20px auto; background-color: #0d1525; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05); }
+        .header { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding: 40px 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .logo { font-size: 32px; margin-bottom: 10px; }
+        .brand-name { font-size: 24px; font-weight: bold; color: #ffffff; letter-spacing: 1px; }
+        .brand-accent { color: #4c62ff; }
+        .content { padding: 40px; line-height: 1.6; color: #cbd5e1; }
+        .greeting { font-size: 20px; color: #ffffff; margin-bottom: 20px; font-weight: 500; }
+        .button-group { text-align: center; margin: 40px 0; }
+        .btn { background-color: #4c62ff; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block; transition: background 0.3s; }
+        .btn:hover { background-color: #3b4df8; }
+        .footer { background-color: #0a111f; padding: 30px 20px; text-align: center; font-size: 12px; color: #64748b; border-top: 1px solid rgba(255,255,255,0.05); }
+        .disclaimer { margin-top: 20px; font-style: italic; font-size: 11px; line-height: 1.4; }
+        .social-links { margin-bottom: 15px; }
+        .social-links a { color: #64748b; text-decoration: none; margin: 0 10px; }
+        .divider { height: 1px; background: rgba(255,255,255,0.05); margin: 30px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">📊</div>
+            <div class="brand-name">Caracas <span class="brand-accent">Portafolio</span></div>
+        </div>
+        <div class="content">
+            <div class="greeting">¡Hola, {{ name }}! 👋</div>
+            <p>Es un placer darte la bienvenida a <strong>Caracas Portafolio</strong>, la plataforma predilecta para la gestión inteligente de inversiones en la Bolsa de Valores de Caracas (BVC).</p>
+            
+            <p>Has dado el primer paso para profesionalizar tu estrategia de inversión. Con nuestra plataforma, podrás:</p>
+            
+            <ul style="padding-left: 20px;">
+                <li>Monitorear tu portafolio en tiempo real con datos de la BVC.</li>
+                <li>Utilizar nuestra Inteligencia Artificial para análisis técnico avanzado.</li>
+                <li>Participar en nuestra red exclusiva de inversores institucionales y minoristas.</li>
+                <li>Recibir alertas personalizadas y seguir gráficos detallados.</li>
+            </ul>
+
+            <div class="button-group">
+                <a href="{{ dashboard_url }}" class="btn">Explorar mi Portafolio</a>
+            </div>
+
+            <div class="divider"></div>
+
+            <p style="font-size: 14px;"><strong>Próximo Paso Sugerido:</strong> Configura tu perfil social para conectar con otros inversores y ver las tendencias del mercado.</p>
+        </div>
+        <div class="footer">
+            <div class="social-links">
+                <a href="#">WhatsApp</a>
+                <a href="#">Twitter/X</a>
+                <a href="#">LinkedIn</a>
+            </div>
+            <p>© 2026 Caracas Portafolio — Inversiones Inteligentes.</p>
+            <p>Este correo fue enviado a {{ email }} como parte de tu registro.</p>
+            
+            <div class="disclaimer">
+                Caracas Portafolio es una plataforma independiente y no está afiliada, asociada, autorizada ni respaldada oficialmente por la Bolsa de Valores de Caracas (BVC). Toda la información es con fines educativos e informativos.
+            </div>
+        </div>
+    </div>
+</body>
+</html>

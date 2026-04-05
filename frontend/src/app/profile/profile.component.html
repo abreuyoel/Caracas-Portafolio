@@ -1,0 +1,280 @@
+<div class="profile-container">
+  <mat-card class="profile-card">
+    <mat-card-header>
+      <mat-card-title>📊 Tu Perfil de Inversión</mat-card-title>
+      <mat-card-subtitle>Personaliza las recomendaciones de IA</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <!-- Loading state -->
+      <div *ngIf="!profileLoaded" class="loading">
+        <mat-spinner diameter="40"></mat-spinner>
+        <p>Cargando tu perfil...</p>
+      </div>
+
+      <!-- Cuestionario inicial (sin perfil) -->
+      <div *ngIf="profileLoaded && !hasProfile" class="questionnaire">
+        <h3>🎯 Cuestionario de Perfil de Inversión</h3>
+        <p>Responde estas preguntas para personalizar tus recomendaciones</p>
+        
+        <form [formGroup]="profileForm" (ngSubmit)="submitProfile()">
+          <mat-form-field appearance="outline">
+            <mat-label>Perfil de Riesgo</mat-label>
+            <mat-select formControlName="risk_profile">
+              <mat-option value="conservador">🛡️ Conservador (Bajo riesgo)</mat-option>
+              <mat-option value="moderado">⚖️ Moderado (Riesgo medio)</mat-option>
+              <mat-option value="agresivo">🚀 Agresivo (Alto riesgo)</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Objetivo de Inversión</mat-label>
+            <mat-select formControlName="investment_goal">
+              <mat-option value="preservar_capital">🛡️ Preservar capital</mat-option>
+              <mat-option value="ingreso_pasivo">💰 Generar ingresos pasivos</mat-option>
+              <mat-option value="crecimiento_moderado">📈 Crecimiento moderado</mat-option>
+              <mat-option value="crecimiento_agresivo">🚀 Crecimiento agresivo</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Horizonte Temporal</mat-label>
+            <mat-select formControlName="time_horizon">
+              <mat-option value="corto_plazo">Corto plazo (&lt; 1 año)</mat-option>
+              <mat-option value="mediano_plazo">Mediano plazo (1-3 años)</mat-option>
+              <mat-option value="largo_plazo">Largo plazo (3-5 años)</mat-option>
+              <mat-option value="muy_largo_plazo">Muy largo plazo (5+ años)</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Experiencia en Inversión (1-10)</mat-label>
+            <input matInput type="number" formControlName="experience_level" min="1" max="10">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Pérdida Máxima Tolerada (%)</mat-label>
+            <input matInput type="number" formControlName="max_loss_tolerance" min="0" max="100">
+          </mat-form-field>
+
+          <div class="behavioral-section">
+            <h4>📈 Retorno Esperado Anual</h4>
+            <p class="section-hint">¿Cuánto esperas ganar anualmente con tus inversiones en BVC?</p>
+            <div class="scenario-options return-options">
+              <div class="scenario-option"
+                   *ngFor="let opt of expectedReturnOptions"
+                   [class.selected]="profileForm.get('expected_return')?.value === opt.value"
+                   (click)="profileForm.patchValue({expected_return: opt.value})">
+                <span class="option-emoji">{{ opt.emoji }}</span>
+                <div class="option-text">
+                  <span class="option-label">{{ opt.label }}</span>
+                  <span class="option-sub">{{ opt.sub }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Capital Disponible para Invertir ($)</mat-label>
+            <input matInput type="number" formControlName="available_capital" min="0">
+            <mat-hint>Monto aproximado en USD que destinarás a inversiones en BVC</mat-hint>
+          </mat-form-field>
+
+          <div class="behavioral-section">
+            <h4>🧠 Preguntas de Comportamiento</h4>
+            <p class="section-hint">Estas preguntas nos ayudan a personalizar mejor tus recomendaciones</p>
+
+            <div class="scenario-question">
+              <div class="scenario-label">
+                <mat-icon>psychology</mat-icon>
+                <span>¿Qué harías si tu portafolio baja un 20% en un día?</span>
+              </div>
+              <div class="scenario-options">
+                <div class="scenario-option"
+                     *ngFor="let opt of dropReactionOptions"
+                     [class.selected]="profileForm.get('portfolio_drop_reaction')?.value === opt.value"
+                     (click)="profileForm.patchValue({portfolio_drop_reaction: opt.value})">
+                  <span class="option-emoji">{{ opt.emoji }}</span>
+                  <span class="option-label">{{ opt.label }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="scenario-question" style="margin-top:18px">
+              <div class="scenario-label">
+                <mat-icon>account_balance</mat-icon>
+                <span>¿Usarías margen (apalancamiento) para ampliar tus inversiones?</span>
+              </div>
+              <div class="scenario-options">
+                <div class="scenario-option"
+                     [class.selected]="profileForm.get('allows_margin_trading')?.value === true"
+                     (click)="profileForm.patchValue({allows_margin_trading: true})">
+                  <span class="option-emoji">📊</span>
+                  <span class="option-label">Sí, me interesa el apalancamiento</span>
+                </div>
+                <div class="scenario-option"
+                     [class.selected]="profileForm.get('allows_margin_trading')?.value === false"
+                     (click)="profileForm.patchValue({allows_margin_trading: false})">
+                  <span class="option-emoji">🚫</span>
+                  <span class="option-label">No, solo invierto capital propio</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="sector-section">
+            <h4>🏭 Sectores Preferidos</h4>
+            <p class="sector-hint">Selecciona los sectores en los que te gustaría invertir</p>
+            <div class="sector-grid">
+              <div *ngFor="let sector of sectorOptions" class="sector-chip"
+                   [class.selected]="isSectorSelected(sector.value, 'preferred')"
+                   (click)="toggleSector(sector.value, 'preferred')">
+                {{ sector.label }}
+              </div>
+            </div>
+          </div>
+
+          <div class="sector-section">
+            <h4>🚫 Sectores a Evitar</h4>
+            <p class="sector-hint">Selecciona los sectores que prefieres no incluir</p>
+            <div class="sector-grid">
+              <div class="sector-chip"
+                   [class.selected]="isSectorSelected('ninguno', 'avoided')"
+                   (click)="toggleSector('ninguno', 'avoided')">
+                ✅ Ninguno
+              </div>
+              <div *ngFor="let sector of sectorOptions.slice(0, sectorOptions.length - 1)" class="sector-chip avoid-chip"
+                   [class.selected]="isSectorSelected(sector.value, 'avoided')"
+                   (click)="toggleSector(sector.value, 'avoided')">
+                {{ sector.label }}
+              </div>
+            </div>
+          </div>
+
+          <div class="toggles">
+            <mat-slide-toggle formControlName="allows_volatile_stocks">
+              ¿Permitir acciones volátiles?
+            </mat-slide-toggle>
+
+            <mat-slide-toggle formControlName="daily_notifications">
+              ¿Recibir notificaciones diarias?
+            </mat-slide-toggle>
+
+            <mat-slide-toggle formControlName="opportunity_alerts">
+              ¿Alertas de oportunidades?
+            </mat-slide-toggle>
+
+            <mat-slide-toggle formControlName="risk_alerts">
+              ¿Alertas de riesgo?
+            </mat-slide-toggle>
+          </div>
+
+          <button mat-raised-button color="primary" type="submit" [disabled]="profileForm.invalid || loading">
+            {{ loading ? 'Guardando...' : 'Guardar Perfil' }}
+          </button>
+        </form>
+      </div>
+
+      <!-- Perfil existente -->
+      <div *ngIf="profileLoaded && hasProfile" class="profile-display">
+        <div class="profile-summary">
+          <div class="profile-item">
+            <mat-icon>shield</mat-icon>
+            <div>
+              <h4>Perfil de Riesgo</h4>
+              <p class="value">{{ profile?.risk_profile | titlecase }}</p>
+            </div>
+          </div>
+
+          <div class="profile-item">
+            <mat-icon>target</mat-icon>
+            <div>
+              <h4>Objetivo</h4>
+              <p class="value">{{ formatInvestmentGoal(profile?.investment_goal) }}</p>
+            </div>
+          </div>
+
+          <div class="profile-item">
+            <mat-icon>calendar_today</mat-icon>
+            <div>
+              <h4>Horizonte</h4>
+              <p class="value">{{ formatInvestmentGoal(profile?.time_horizon) }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="profile-stats">
+          <mat-card class="stat-card">
+            <mat-card-content>
+              <h4>Experiencia</h4>
+              <p class="stat-value">{{ profile?.experience_level }}/10</p>
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card class="stat-card">
+            <mat-card-content>
+              <h4>Pérdida Máx.</h4>
+              <p class="stat-value">{{ profile?.max_loss_tolerance }}%</p>
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card class="stat-card">
+            <mat-card-content>
+              <h4>Retorno Esp.</h4>
+              <p class="stat-value">{{ profile?.expected_return }}%</p>
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card class="stat-card">
+            <mat-card-content>
+              <h4>Capital Disp.</h4>
+              <p class="stat-value">${{ profile?.available_capital | number:'1.2-2' }}</p>
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card class="stat-card">
+            <mat-card-content>
+              <h4>Margen</h4>
+              <p class="stat-value" [style.color]="profile?.allows_margin_trading ? '#2dd994' : '#ff4d6a'">
+                {{ profile?.allows_margin_trading ? 'Sí' : 'No' }}
+              </p>
+            </mat-card-content>
+          </mat-card>
+        </div>
+
+        <div class="sectors-display" *ngIf="profile?.preferred_sectors || profile?.avoided_sectors">
+          <div *ngIf="profile?.preferred_sectors">
+            <h4>🏭 Sectores preferidos</h4>
+            <div class="sector-tags">
+              <span *ngFor="let s of profile.preferred_sectors.split(',')" class="sector-tag preferred">{{ s.trim() }}</span>
+            </div>
+          </div>
+          <div *ngIf="profile?.avoided_sectors">
+            <h4>🚫 Sectores evitados</h4>
+            <div class="sector-tags">
+              <span *ngFor="let s of profile.avoided_sectors.split(',')" class="sector-tag avoided">{{ s.trim() }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="notifications-settings">
+          <h4>🔔 Notificaciones</h4>
+          <mat-slide-toggle [checked]="profile?.daily_notifications" (change)="updateNotifications('daily_notifications', $event.checked)">
+            Notificaciones diarias
+          </mat-slide-toggle>
+          <mat-slide-toggle [checked]="profile?.opportunity_alerts" (change)="updateNotifications('opportunity_alerts', $event.checked)">
+            Alertas de oportunidades
+          </mat-slide-toggle>
+          <mat-slide-toggle [checked]="profile?.risk_alerts" (change)="updateNotifications('risk_alerts', $event.checked)">
+            Alertas de riesgo
+          </mat-slide-toggle>
+        </div>
+
+        <button mat-raised-button color="primary" (click)="editProfile()">
+          <mat-icon>edit</mat-icon>
+          Editar Perfil
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

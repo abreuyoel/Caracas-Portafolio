@@ -1,0 +1,30 @@
+<div class="libros-container">
+  <div class="libros-header">
+    <h1>Libros de Órdenes</h1>
+    <p>Selecciona una acción para ver sus niveles de compra y venta en tiempo real</p>
+  </div>
+
+  @if (loading) {
+    <div class="loading-spinner">
+      <mat-spinner diameter="48"></mat-spinner>
+      <p>Cargando acciones activas...</p>
+    </div>
+  } @else {
+    <p class="stocks-count">{{ stocks.length }} acciones activas disponibles</p>
+    <div class="stocks-grid">
+      <div class="stock-card" *ngFor="let stock of stocks; let i = index"
+           [style.--index]="i"
+           (click)="viewOrderBook(stock.symbol)">
+        <div class="card-top">
+          <div class="stock-symbol">{{ stock.symbol }}</div>
+          <div class="active-badge">ACTIVO</div>
+        </div>
+        <div class="stock-name">{{ stock.name }}</div>
+        <div class="card-footer-row">
+          <span class="view-orders">Ver libro</span>
+          <mat-icon class="stock-icon">auto_graph</mat-icon>
+        </div>
+      </div>
+    </div>
+  }
+</div>

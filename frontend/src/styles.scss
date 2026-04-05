@@ -1,0 +1,131 @@
+// Global styles
+html, body {
+  height: 100%;
+  margin: 0;
+  font-family: 'Inter', Roboto, "Helvetica Neue", sans-serif;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: #ffffff;
+}
+
+// Custom Scrollbar
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.5);
+  border-radius: 4px;
+
+  &:hover {
+    background: rgba(99, 102, 241, 0.7);
+  }
+}
+
+// Snackbar Styles
+.success-snackbar {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+  color: white !important;
+  font-weight: 500;
+}
+
+.error-snackbar {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+  color: white !important;
+  font-weight: 500;
+}
+
+// Utility Classes
+.text-center {
+  text-align: center;
+}
+
+.mt-2 {
+  margin-top: 16px;
+}
+
+.mb-2 {
+  margin-bottom: 16px;
+}
+
+/* Dropdowns y Opciones Plegables (Global Material UI Overrides) */
+.cdk-overlay-pane .mat-mdc-select-panel {
+  background: #111827 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5) !important;
+}
+.mdc-menu-surface {
+  background: #111827 !important;
+}
+.mat-mdc-option {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+.mat-mdc-option:hover,
+.mat-mdc-option.mdc-list-item--selected {
+  background: rgba(99, 102, 241, 0.15) !important;
+  color: #fff !important;
+}
+.mat-mdc-option .mdc-list-item__primary-text {
+  color: inherit !important;
+}
+
+/* Company info select dropdown in Dashboard */
+.stock-info-panel, .stock-select-panel {
+  background: rgba(13, 21, 37, 0.98) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(76, 98, 255, 0.2) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6) !important;
+}
+.stock-info-panel .mdc-list-item, .stock-select-panel .mdc-list-item {
+  transition: background 0.15s ease !important;
+}
+.stock-info-panel .mdc-list-item:hover,
+.stock-info-panel .mdc-list-item.mdc-list-item--selected,
+.stock-select-panel .mdc-list-item:hover,
+.stock-select-panel .mdc-list-item.mdc-list-item--selected {
+  background: rgba(76, 98, 255, 0.15) !important;
+}
+.stock-info-panel .mdc-list-item__primary-text,
+.stock-select-panel .mdc-list-item__primary-text {
+  color: #fff !important;
+}
+.stock-info-panel .si-symbol, .stock-select-panel .stock-symbol {
+  color: #6b80ff !important;
+  font-weight: 700;
+  margin-right: 8px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.stock-info-panel .si-name, .stock-select-panel .stock-name {
+  color: rgba(255, 255, 255, 0.65) !important;
+  font-size: 0.82rem;
+}
+
+/* Fix text input inside stock-info-panel */
+.stock-search-wrap {
+  display: flex !important;
+  align-items: center !important;
+  padding: 8px 16px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: rgba(0,0,0,0.2) !important;
+}
+.stock-search-icon {
+  color: rgba(255, 255, 255, 0.4) !important;
+  margin-right: 8px !important;
+}
+.stock-search-input {
+  background: transparent !important;
+  border: none !important;
+  color: #fff !important;
+  font-size: 0.9rem !important;
+  outline: none !important;
+  width: 100% !important;
+}
+.stock-search-input::placeholder {
+  color: rgba(255, 255, 255, 0.3) !important;
+}

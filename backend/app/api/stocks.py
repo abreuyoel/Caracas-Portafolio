@@ -923,14 +923,6 @@ async def get_live_candle(
     market_open = bvc_scraper.is_market_open()
     logger.info(f"📡 [LIVE] {sym} — mercado {'ABIERTO' if market_open else 'CERRADO'}")
 
-    if not market_open:
-        return {
-            'symbol':      sym,
-            'market_open': False,
-            'candle':      None,
-            'message':     'Mercado cerrado',
-        }
-
     try:
         candle = await bvc_scraper.get_live_candle(sym)
     except Exception as e:
@@ -944,8 +936,9 @@ async def get_live_candle(
 
     return {
         'symbol':      sym,
-        'market_open': True,
+        'market_open': market_open,
         'candle':      candle,
+        'message':     None if market_open else 'Mercado cerrado'
     }
 
 

@@ -33,7 +33,12 @@ class Settings(BaseSettings):
 
     # Gemini AI
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-1.5-flash"
+    gemini_model: str = "gemini-2.5-pro"
+
+    @property
+    def gemini_api_key_clean(self) -> str:
+        """API key sin espacios/saltos de línea que rompen headers HTTP."""
+        return self.gemini_api_key.strip()
     
     class Config:
         env_file = ".env"

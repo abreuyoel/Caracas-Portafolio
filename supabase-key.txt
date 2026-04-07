@@ -1,0 +1,1 @@
+﻿postgresql://postgres.db.hbprqqdduayqvwbslusu.supabase.co:Financiera2000*@aws-0-us-east-1.pooler.supabase.com:6543/postgres?pgbouncer=true

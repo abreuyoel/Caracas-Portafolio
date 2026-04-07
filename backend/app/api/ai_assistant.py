@@ -13,6 +13,7 @@ from typing import Optional, List, Dict, Any
 import google.generativeai as genai
 from app.config import settings
 import logging
+import asyncio
 from datetime import datetime, timezone, timedelta
 
 router = APIRouter()
@@ -127,9 +128,10 @@ def get_gemini_model():
     """
     models_to_try = [
         settings.gemini_model,
-        'gemini-1.5-flash',
-        'gemini-1.0-pro',
-        'gemini-pro'
+        'gemini-2.5-pro',
+        'gemini-2.0-flash',
+        'gemini-1.5-flash-latest',
+        'gemini-1.5-pro-latest',
     ]
     
     for model_name in models_to_try:
@@ -379,7 +381,7 @@ async def chat_with_ai(
 ):
     """Chat con IA - Análisis técnico completo + perfil del inversor"""
     try:
-        genai.configure(api_key=settings.gemini_api_key)
+        genai.configure(api_key=settings.gemini_api_key_clean, transport="rest")
         model, model_name = get_gemini_model()
 
         # ── Obtener perfil del usuario ────────────────────────────────────────
@@ -587,7 +589,7 @@ RESPUESTA:"""
             )
 
         logger.info(f"🤖 [CHAT] Generando respuesta...")
-        response = model.generate_content(prompt)
+        response = await asyncio.to_thread(model.generate_content, prompt)
 
         return ChatResponse(
             response=response.text,
@@ -624,7 +626,7 @@ async def analyze_portfolio(
         AnalyzePortfolioResponse: Análisis del portafolio
     """
     try:
-        genai.configure(api_key=settings.gemini_api_key)
+        genai.configure(api_key=settings.gemini_api_key_clean, transport="rest")
         model, model_name = get_gemini_model()
 
         prompt = """
@@ -647,7 +649,7 @@ async def analyze_portfolio(
         Análisis:
         """
 
-        response = model.generate_content(prompt)
+        response = await asyncio.to_thread(model.generate_content, prompt)
         logger.info(f"✅ Portfolio analysis generated for user {user_id}")
 
         return AnalyzePortfolioResponse(
@@ -673,7 +675,7 @@ async def list_available_models():
         ModelInfo: Lista de modelos disponibles
     """
     try:
-        genai.configure(api_key=settings.gemini_api_key)
+        genai.configure(api_key=settings.gemini_api_key_clean, transport="rest")
         models = genai.list_models()
         available_models = [
             m.name.replace('models/', '')
@@ -699,7 +701,7 @@ async def health_check():
         dict: Estado del servicio
     """
     try:
-        genai.configure(api_key=settings.gemini_api_key)
+        genai.configure(api_key=settings.gemini_api_key_clean, transport="rest")
         model, model_name = get_gemini_model()
         return {
             "status": "healthy",

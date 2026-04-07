@@ -136,7 +136,7 @@ import { RouterLink } from '@angular/router';
                 <li>Alias obligatorio — nombre real nunca visible</li>
                 <li>Perfiles públicos o privados</li>
                 <li>Seguidores y notificaciones por nueva transacción</li>
-                <li>Privacidad garantizada (LOPDP Venezuela)</li>
+                <li>Privacidad garantizada </li>
               </ul>
             </article>
 

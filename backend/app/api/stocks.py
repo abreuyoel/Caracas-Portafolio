@@ -445,24 +445,44 @@ async def sync_all_history(
 @router.get("/bvc/{symbol}")
 async def get_stock_details(
     symbol: str,
-    user_id: UUID = Depends(get_current_user_id)
+    user_id: UUID = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db)
 ):
     """Obtener detalles de una acción específica y verificar si está activa"""
+    sym = symbol.upper()
     try:
-        details = await bvc_scraper.get_stock_details(symbol.upper())
-        if not details:
-            raise HTTPException(status_code=404, detail="Acción no encontrada")
-        if not details.get('is_active', False):
-            raise HTTPException(
-                status_code=400,
-                detail=f"La acción {symbol} no está activa (Estado: {details.get('status', 'Desconocido')})"
-            )
-        return details
+        details = await bvc_scraper.get_stock_details(sym)
+        if details:
+            if not details.get('is_active', False):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"La acción {sym} no está activa (Estado: {details.get('status', 'Desconocido')})"
+                )
+            return details
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"❌ Error getting stock details: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.warning(f"⚠️ BVC scraping failed for {sym}: {e}")
+
+    # DB fallback when BVC is unreachable
+    try:
+        result = await db.execute(select(Stock).where(Stock.symbol == sym))
+        stock = result.scalar_one_or_none()
+        if stock:
+            logger.info(f"✅ [DB-FALLBACK] Retornando datos de DB para {sym}")
+            return {
+                "symbol": stock.symbol,
+                "name": stock.name,
+                "is_active": stock.is_active,
+                "currency": "Bs",
+                "last_price": float(stock.last_price) if stock.last_price else None,
+                "isin": stock.isin,
+                "source": "cache",
+            }
+    except Exception as db_err:
+        logger.error(f"❌ [DB-FALLBACK] Error: {db_err}")
+
+    raise HTTPException(status_code=404, detail=f"Acción {sym} no encontrada")
 
 
 @router.post("/bvc/refresh")
@@ -733,11 +753,37 @@ async def get_stock_history(
 
     except Exception as e:
         logger.error(f"❌ Error obteniendo historial de {sym}: {e}")
-        # Fallback final: intentar con la tabla #ult3
+        # Fallback final: usar datos cacheados en price_history (DB)
         try:
-            return await _fallback_history(sym)
-        except Exception:
-            raise HTTPException(status_code=500, detail=str(e))
+            stock_res = await db.execute(select(Stock).where(Stock.symbol == sym))
+            stock = stock_res.scalar_one_or_none()
+            if stock:
+                from app.models.stock import PriceHistory
+                ph_res = await db.execute(
+                    select(PriceHistory)
+                    .where(PriceHistory.stock_id == stock.id)
+                    .order_by(PriceHistory.price_date.asc())
+                )
+                rows = ph_res.scalars().all()
+                if rows:
+                    candles = [
+                        {
+                            'time':   r.price_date.isoformat(),
+                            'open':   float(r.open_price or r.close_price or 0),
+                            'high':   float(r.high_price or r.close_price or 0),
+                            'low':    float(r.low_price or r.close_price or 0),
+                            'close':  float(r.close_price or 0),
+                            'volume': int(r.volume or 0),
+                            'amount': float(r.amount or 0),
+                            'trades': int(r.trades or 0),
+                        }
+                        for r in rows
+                    ]
+                    logger.info(f"📦 [DB-FALLBACK] {sym}: {len(candles)} velas desde price_history")
+                    return {'symbol': sym, 'count': len(candles), 'candles': candles}
+        except Exception as db_err:
+            logger.error(f"❌ [DB-FALLBACK] Error consultando price_history para {sym}: {db_err}")
+        raise HTTPException(status_code=503, detail=f"Datos de historial no disponibles para {sym}")
         
 async def _fallback_history(symbol: str):
     """Fallback usando solo la tabla #ult3 (comportamiento original)"""

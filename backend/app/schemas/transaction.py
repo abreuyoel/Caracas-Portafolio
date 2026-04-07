@@ -30,9 +30,9 @@ class TransactionCreate(BaseModel):
 
 class TransactionResponse(BaseModel):
     id: int
-    order_number: Optional[str]
+    order_number: Optional[str] = None
     order_type: str
-    request_type: str
+    request_type: Optional[str] = None
     quantity: int
     avg_price: float
     gross_amount: Optional[float]

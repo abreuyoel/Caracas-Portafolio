@@ -286,3 +286,61 @@
     transform: translateY(0);
   }
 }
+// ── Mobile navigation ─────────────────────────────────────────────────────────
+.mobile-topbar {
+  display: none;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: #0d1117;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  height: 48px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.mobile-back-btn {
+  display: flex;
+  align-items: center;
+  color: #fff;
+  text-decoration: none;
+  padding: 4px;
+  border-radius: 6px;
+  &:hover { background: rgba(255,255,255,0.08); }
+}
+.mobile-topbar-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+}
+.mobile-bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: 60px;
+  background: #0d1117;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  z-index: 1000;
+  align-items: center;
+  justify-content: space-around;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.mbn-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  color: rgba(255,255,255,0.45);
+  text-decoration: none;
+  font-size: 10px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: color 0.2s;
+  &.active { color: #4C62FF; }
+  &:hover { color: #fff; }
+}
+@media (max-width: 768px) {
+  .mobile-topbar { display: flex; }
+  .mobile-bottom-nav { display: flex; }
+  .libros-container { padding-bottom: 60px; }
+}

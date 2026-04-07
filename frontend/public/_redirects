@@ -1,0 +1,3 @@
+# _redirects
+# Cloudflare Pages - SPA routing: redirigir todo a index.html para Angular Router
+/*    /index.html   200

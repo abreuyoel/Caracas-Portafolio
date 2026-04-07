@@ -21,25 +21,39 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
-    logger.info("🚀 Starting up...")
+    # === DEBUG: Log de variables de entorno ===
+    import os
+    logger.info("=== STARTUP DEBUG ===")
+    logger.info(f"PORT env var: {os.getenv('PORT')}")
+    logger.info(f"SUPABASE_URL: {'✅' if os.getenv('SUPABASE_URL') else '❌ NOT SET'}")
+    logger.info(f"GEMINI_API_KEY: {'✅' if os.getenv('GEMINI_API_KEY') else '❌ NOT SET'}")
+    logger.info(f"RESEND_API_KEY: {'✅' if os.getenv('RESEND_API_KEY') else '❌ NOT SET'}")
+    logger.info("=======================")
+    # ====================================
+    
+    # 1. Inicializar DB (crítico - si falla, no continuar)
     try:
         await init_db()
+        logger.info("✅ Database initialized")
     except Exception as e:
-        logger.warning(f"⚠️  DB init failed: {e}")
+        logger.error(f"❌ DB init failed: {e}")
+        # No yield - la app no debe iniciar sin DB
+        return
 
-    # Lanzar sync de historial al arrancar (sin bloquear)
+    # 2. Lanzar sync de historial en background (no bloqueante)
     try:
         from app.api.stocks import _sync_all_history_bg
         asyncio.create_task(_sync_all_history_bg())
-        logger.info("🔄 Sync de historial lanzado en background al startup")
+        logger.info("🔄 Sync de historial lanzado en background")
     except Exception as e:
         logger.warning(f"⚠️  No se pudo lanzar sync al startup: {e}")
 
-    # Scheduler: BCV daily rate + notificaciones
+    # 3. Scheduler para tareas programadas
+    scheduler = None
     try:
         scheduler = AsyncIOScheduler(timezone="America/Caracas")
-        # Tasa BCV: lunes–viernes a las 00:00 hora Caracas
+        
+        # Job: Tasa BCV diaria (Lun-Vie 00:00 Caracas)
         scheduler.add_job(
             fetch_and_save_today_rate,
             trigger=CronTrigger(day_of_week="mon-fri", hour=0, minute=0, timezone="America/Caracas"),
@@ -48,21 +62,32 @@ async def lifespan(app: FastAPI):
             misfire_grace_time=3600,
             replace_existing=True,
         )
-        # Fetch rate immediately on startup to ensure today's rate is in the DB
+        
+        # Fetch inmediato al startup (para tener tasa hoy)
         asyncio.create_task(fetch_and_save_today_rate())
-
+        
         scheduler.start()
-        logger.info("🗓️  APScheduler started — BCV rate job: Mon–Fri 00:00 Caracas")
+        logger.info("🗓️  APScheduler started — BCV rate: Mon–Fri 00:00 Caracas")
     except Exception as e:
-        logger.warning(f"⚠️  Scheduler init failed: {e}")
+        logger.error(f"❌ Scheduler init failed: {e}")
+        # Continuamos sin scheduler - no es crítico para el health check
 
-    yield
+    # Guardar scheduler en app state para shutdown limpio
+    app.state.scheduler = scheduler
+
+    yield  # ← App corriendo
+
     # Shutdown
     logger.info("🛑 Shutting down...")
-    try:
-        scheduler.shutdown(wait=False)
-    except Exception:
-        pass
+    
+    # Cerrar scheduler si existe
+    scheduler = getattr(app.state, 'scheduler', None)
+    if scheduler:
+        try:
+            scheduler.shutdown(wait=False)
+            logger.info("🗓️  Scheduler shutdown complete")
+        except Exception as e:
+            logger.warning(f"⚠️  Scheduler shutdown error: {e}")
 
 
 app = FastAPI(
@@ -76,11 +101,20 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        #"https://stages-sussex-charity-karma.trycloudflare.com",  # Tu túnel frontend
-        "https://*.trycloudflare.com",  # Wildcard para pruebas futuras
+        # Producción - DOMINIOS PERSONALIZADOS
+        "https://caracasportafolio.com",
+        "https://www.caracasportafolio.com",
+        # Cloudflare Pages preview URLs
+        "https://*.caracas-portafolio.pages.dev",
+        # API personalizada
+        "https://api.caracasportafolio.com",
+        # Desarrollo local
         "http://localhost:4200",
         "http://127.0.0.1:4200",
-        settings.frontend_url  # Si está definido en tus settings
+        # Cloudflare Tunnel (testing)
+        "https://*.trycloudflare.com",
+        # Variable de entorno para flexibilidad
+        settings.frontend_url,
     ],
     allow_credentials=True,
     allow_methods=["*"],

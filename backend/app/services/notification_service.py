@@ -69,9 +69,9 @@ class NotificationService:
             import google.generativeai as genai
             from app.config import settings
             
-            genai.configure(api_key=settings.gemini_api_key)
-            model = genai.GenerativeModel('gemini-1.5-flash')
-            
+            genai.configure(api_key=settings.gemini_api_key_clean, transport="rest")
+            model = genai.GenerativeModel('gemini-2.5-pro')
+
             prompt = f"""
             Eres un analista financiero experto. Genera un resumen diario personalizado.
             
@@ -92,7 +92,7 @@ class NotificationService:
             Tono: Profesional pero accesible. En español.
             """
             
-            response = model.generate_content(prompt)
+            response = await asyncio.to_thread(model.generate_content, prompt)
             return response.text
             
         except Exception as e:

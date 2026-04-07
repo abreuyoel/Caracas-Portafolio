@@ -2,12 +2,19 @@ venv/
 __pycache__/
 *.pyc
 *.pyo
+*.pyd
+.Python
+env/
 .env
 *.env
+.env.*
 .git/
 .gitignore
+.github/
+.vscode/
 Dockerfile
 .dockerignore
+# Scripts de utilidad local (no van a producción)
 check_*.py
 test_*.py
 verify_*.py
@@ -15,5 +22,9 @@ migrate_*.py
 migration_*.py
 update_db.py
 import_bcv_rates.py
+# Logs y archivos temporales
+*.log
 *.txt
 !requirements.txt
+*.db
+*.sqlite

@@ -3,10 +3,20 @@ from sqlalchemy.orm import declarative_base
 from app.config import settings
 from typing import AsyncGenerator
 import logging
+import ssl
 
 logger = logging.getLogger(__name__)
 
-# Engine con configuración optimizada
+# SSL para conexiones remotas (Supabase session pooler / producción)
+_is_remote = "localhost" not in settings.database_url and "127.0.0.1" not in settings.database_url
+if _is_remote:
+    _ssl_ctx = ssl.create_default_context()
+    _ssl_ctx.check_hostname = False
+    _ssl_ctx.verify_mode = ssl.CERT_NONE
+    _connect_args = {"ssl": _ssl_ctx}
+else:
+    _connect_args = {}
+
 engine = create_async_engine(
     settings.database_url,
     echo=settings.debug,
@@ -14,7 +24,8 @@ engine = create_async_engine(
     pool_size=5,
     max_overflow=10,
     pool_timeout=30,
-    pool_recycle=1800
+    pool_recycle=1800,
+    connect_args=_connect_args,
 )
 
 AsyncSessionLocal = async_sessionmaker(

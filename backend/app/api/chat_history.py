@@ -20,10 +20,22 @@ from typing import List, Optional, Dict, Any
 import google.generativeai as genai
 from app.config import settings
 import logging
+import asyncio
 from datetime import datetime
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+
+def _fix_encoding(text: str | None) -> str | None:
+    """Repara texto que fue almacenado con doble-encoding UTF-8→Latin-1."""
+    if not text:
+        return text
+    try:
+        fixed = text.encode('latin-1').decode('utf-8')
+        return fixed
+    except (UnicodeDecodeError, UnicodeEncodeError):
+        return text  # Ya estaba bien o no se puede reparar
 
 
 # ==================== AUTH ====================
@@ -49,9 +61,10 @@ def get_gemini_model():
     """Obtener modelo de Gemini disponible con fallback"""
     models_to_try = [
         settings.gemini_model,
-        'gemini-1.5-flash',
-        'gemini-1.0-pro',
-        'gemini-pro'
+        'gemini-2.5-pro',
+        'gemini-2.0-flash',
+        'gemini-1.5-flash-latest',
+        'gemini-1.5-pro-latest',
     ]
     for model_name in models_to_try:
         try:
@@ -592,7 +605,7 @@ async def get_chat_sessions(
             response.append(ChatSessionResponse(
                 id=session.id,
                 user_id=str(session.user_id),
-                title=session.title,
+                title=_fix_encoding(session.title),
                 chat_type=getattr(session, 'chat_type', 'general') or 'general',
                 is_active=session.is_active,
                 created_at=session.created_at,
@@ -793,7 +806,7 @@ async def get_chat_messages(
             id=msg.id,
             session_id=msg.session_id,
             role=msg.role,
-            content=msg.content,
+            content=_fix_encoding(msg.content),
             model_used=msg.model_used,
             tokens_used=msg.tokens_used,
             created_at=msg.created_at
@@ -821,7 +834,7 @@ async def chat_with_ai(
     - Modo GENERAL: usa portafolio y transacciones del usuario
     """
     try:
-        genai.configure(api_key=settings.gemini_api_key)
+        genai.configure(api_key=settings.gemini_api_key_clean, transport="rest")
         model, model_name = get_gemini_model()
 
         is_comparison_mode = (
@@ -1070,7 +1083,7 @@ Pregunta: {chat_data.message}
 Responde de manera clara, cita datos cuando sea posible, máximo 400 palabras.{profile_conclusion}
 Respuesta:"""
 
-        response = model.generate_content(prompt)
+        response = await asyncio.to_thread(model.generate_content, prompt)
         logger.info(f"✅ [CHAT] Respuesta generada ({len(response.text)} chars)")
 
         # Auto-create session for chart/comparison chats that don't have one yet

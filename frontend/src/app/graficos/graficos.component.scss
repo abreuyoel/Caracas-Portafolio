@@ -8,6 +8,72 @@
     }
     *{box-sizing:border-box;}
 
+    // ── Mobile top bar ──────────────────────────────────────────────────────────
+    .mobile-topbar {
+      display: none;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      background: var(--bg2);
+      border-bottom: 1px solid var(--bd);
+      height: 48px;
+      flex-shrink: 0;
+      z-index: 100;
+    }
+    .mobile-back-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--t);
+      text-decoration: none;
+      padding: 4px;
+      border-radius: 6px;
+      &:hover { background: var(--bd); }
+    }
+    .mobile-topbar-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--t);
+      letter-spacing: 0.03em;
+    }
+
+    // ── Mobile bottom nav ────────────────────────────────────────────────────────
+    .mobile-bottom-nav {
+      display: none;
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: 60px;
+      background: var(--bg2);
+      border-top: 1px solid var(--bd);
+      z-index: 1000;
+      align-items: center;
+      justify-content: space-around;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .mbn-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      color: var(--t2);
+      text-decoration: none;
+      font-size: 10px;
+      padding: 4px 8px;
+      border-radius: 8px;
+      transition: color 0.2s;
+      &.active { color: var(--ac); }
+      &:hover { color: var(--t); }
+      svg { flex-shrink: 0; }
+    }
+
+    @media (max-width: 768px) {
+      :host { height: auto; overflow: auto; }
+      .mobile-topbar { display: flex; }
+      .mobile-bottom-nav { display: flex; }
+      .charts-shell { height: calc(100vh - 48px - 60px); }
+      .sidebar { display: none !important; }
+    }
+
     .charts-shell{display:flex;height:100vh;background:var(--bg);color:var(--t);overflow:hidden;}
     .charts-shell.fullscreen{position:fixed;inset:0;z-index:9999;height:100vh;}
     .charts-shell.fullscreen .sidebar{display:none !important;}
@@ -129,7 +195,7 @@
     .x-btn:hover{color:var(--dn);}
 
     /* content-row: chart + AI panel side by side */
-    .content-row{flex:1;display:flex;overflow:hidden;min-height:0;}
+    .content-row{flex:1;display:flex;overflow:hidden;min-height:0;position:relative;}
 
     /* chart panes */
     .chart-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative;min-height:0;}
@@ -244,13 +310,16 @@
     .val-dn  { color: var(--dn) !important; }
     .val-mid { color: var(--gold) !important; }
 
-    /* ── AI Panel ─────────────────────────────────────────────────────── */
+    /* ── AI Panel — position:absolute para evitar CLS en el chart ──────── */
     .ai-panel{
+      position:absolute;
+      right:0;top:0;bottom:0;
       width:0;overflow:hidden;
       background:var(--bg2);border-left:1px solid var(--bd);
       display:flex;flex-direction:column;
       transition:width .25s cubic-bezier(.4,0,.2,1);
-      flex-shrink:0;
+      z-index:30;
+      contain:layout style;
     }
     .ai-panel.open{width:320px;}
 
@@ -258,6 +327,27 @@
       .sidebar{width:52px;min-width:52px;}
       .stock-name,.stock-badge,.sym-name,.ohlcv-bar{display:none;}
       .ai-panel.open{width:100%;position:absolute;right:0;top:0;bottom:0;z-index:50;}
+      .analytics-panel{width:calc(100% - 16px);right:8px;left:8px;max-width:320px;}
+      .alert-panel{width:calc(100% - 16px);right:8px;left:8px;}
+      .top-bar{gap:4px;padding:4px 6px;}
+      .btn-group{gap:0px;padding:1px;}
+      .sm-btn{padding:2px 5px;font-size:10px;}
+    }
+    @media(max-width:480px){
+      .sidebar{width:40px;min-width:40px;}
+      .sidebar .stock-search,.sidebar .sidebar-title{display:none;}
+      .sym-big{font-size:14px;}
+      .price-display{font-size:12px;}
+      .top-left{gap:6px;}
+      .top-right{gap:2px;flex-wrap:nowrap;overflow-x:auto;}
+      .ohlcv-bar,.sym-name,.price-change,.currency-label{display:none;}
+      .act-btn{padding:2px 5px;font-size:11px;}
+      .icon-btn{font-size:11px;}
+      .main-pane{min-height:160px;}
+      .vol-pane{height:60px;}
+      .rsi-pane,.macd-pane{height:90px;}
+      .sub-pane{height:80px;}
+      .ind-label{display:none;}
     }
 
     /* ── Alert button ─────────────────────────────────────────────── */

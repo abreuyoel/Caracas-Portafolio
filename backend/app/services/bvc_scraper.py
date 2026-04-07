@@ -448,106 +448,102 @@ class BVCScraper:
 
 
     async def get_live_candle(self, symbol: str) -> dict | None:
-        def _run() -> dict | None:
-            import asyncio
-            import sys
-            from playwright.async_api import async_playwright
-            from bs4 import BeautifulSoup
-            from datetime import date
+        """
+        Obtiene la vela live del día actual desde market.bolsadecaracas.com
+        usando httpx (sin Playwright — el sitio renderiza SSR sin JS).
 
-            async def scrape() -> dict | None:
-                async with async_playwright() as p:
-                    browser = await p.chromium.launch(
-                        headless=True,
-                        args=['--disable-blink-features=AutomationControlled']
-                    )
-                    context = await browser.new_context(
-                        user_agent=(
-                            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                            "AppleWebKit/537.36 (KHTML, like Gecko) "
-                            "Chrome/120.0.0.0 Safari/537.36"
-                        ),
-                        viewport={"width": 1280, "height": 800}
-                    )
-                    page = await context.new_page()
-                    try:
-                        await page.goto(
-                            MARKET_URL,
-                            wait_until="networkidle",
-                            timeout=60000  # 60 seconds
-                        )
-                        await page.wait_for_selector("table tbody tr", timeout=30000)
-                        html = await page.content()
-                    except Exception as e:
-                        logger.error(f"[live] page error: {e}")
-                        return None
-                    finally:
-                        await page.close()
-                        await browser.close()
-
-                if not html:
-                    return None
-
-                soup = BeautifulSoup(html, 'lxml')
-                today_iso = date.today().isoformat()
-                rows = soup.select('table tbody tr')
-                for row in rows:
-                    cells = row.find_all('td')
-                    if len(cells) < 17:
-                        continue
-                    sym_cell = cells[3].get_text(strip=True)
-                    if sym_cell.upper() != symbol.upper():
-                        continue
-
-                    def n(cell_idx: int) -> float | None:
-                        txt = cells[cell_idx].get_text(strip=True).replace('.', '').replace(',', '.')
-                        try:
-                            v = float(txt)
-                            return v if v > 0 else None
-                        except Exception:
-                            return None
-
-                    close_p = n(8)
-                    open_p  = n(9)
-                    high_p  = n(15)
-                    low_p   = n(16)
-                    volume  = n(12)
-                    amount  = n(13)
-                    trades  = n(14)
-
-                    if not all([close_p, open_p, high_p, low_p]):
-                        return None
-
-                    return {
-                        'time':   today_iso,
-                        'open':   open_p,
-                        'high':   high_p,
-                        'low':    low_p,
-                        'close':  close_p,
-                        'volume': volume or 0,
-                        'amount': amount or 0,
-                        'trades': int(trades) if trades else 0,
-                        'is_live': True,
-                    }
-
-                return None
-
-            # Create a new event loop inside the thread
-            if sys.platform == 'win32':
-                loop = asyncio.ProactorEventLoop()
-            else:
-                loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                return loop.run_until_complete(scrape())
-            finally:
-                loop.close()
-                asyncio.set_event_loop(None)
+        Columnas de la tabla (0-indexed):
+          0  logo img (alt=símbolo)
+          1  botón libro de órdenes
+          2  nombre corto
+          3  símbolo (badge)
+          4  número de operaciones acumuladas
+          5  mejor oferta compra
+          6  mejor oferta venta
+          7  volumen en órdenes
+          8  precio actual (con icono de tendencia)
+          9  precio apertura
+          10 variación absoluta
+          11 variación porcentual
+          12 volumen negociado
+          13 monto negociado
+          14 cantidad de operaciones
+          15 máximo del día
+          16 mínimo del día
+        """
+        import httpx
+        from bs4 import BeautifulSoup
+        from datetime import date as date_type
 
         try:
-            loop = asyncio.get_event_loop()
-            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-                return await loop.run_in_executor(executor, _run)
+            async with httpx.AsyncClient(
+                timeout=20,
+                follow_redirects=True,
+                headers={
+                    "User-Agent": (
+                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                        "AppleWebKit/537.36 (KHTML, like Gecko) "
+                        "Chrome/120.0.0.0 Safari/537.36"
+                    ),
+                    "Accept-Language": "es-VE,es;q=0.9",
+                }
+            ) as client:
+                resp = await client.get(MARKET_URL)
+                resp.raise_for_status()
+                html = resp.text
+
+            soup = BeautifulSoup(html, 'lxml')
+            today_iso = date_type.today().isoformat()
+
+            rows = soup.select('table tbody tr')
+            for row in rows:
+                cells = row.find_all('td')
+                if len(cells) < 17:
+                    continue
+
+                sym_cell = cells[3].get_text(strip=True).upper()
+                if sym_cell != symbol.upper():
+                    continue
+
+                def n(idx: int) -> float | None:
+                    txt = cells[idx].get_text(strip=True).replace('.', '').replace(',', '.')
+                    try:
+                        v = float(txt)
+                        return v if v > 0 else None
+                    except Exception:
+                        return None
+
+                close_p = n(8)
+                open_p  = n(9)
+                high_p  = n(15)
+                low_p   = n(16)
+                volume  = n(12)
+                amount  = n(13)
+                trades  = n(14)
+
+                if not all([close_p, open_p, high_p, low_p]):
+                    logger.warning(f"[LIVE] {symbol}: datos incompletos en tabla")
+                    return None
+
+                logger.info(
+                    f"✅ [LIVE-httpx] {symbol}: "
+                    f"O={open_p} H={high_p} L={low_p} C={close_p} V={volume}"
+                )
+                return {
+                    'time':    today_iso,
+                    'open':    open_p,
+                    'high':    high_p,
+                    'low':     low_p,
+                    'close':   close_p,
+                    'volume':  volume or 0,
+                    'amount':  amount or 0,
+                    'trades':  int(trades) if trades else 0,
+                    'is_live': True,
+                }
+
+            logger.info(f"⚠️ [LIVE-httpx] {symbol}: no encontrado en la tabla del mercado")
+            return None
+
         except Exception as e:
             logger.error(f"❌ get_live_candle {symbol}: {e}")
             return None

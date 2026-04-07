@@ -374,6 +374,18 @@
   50%      { opacity: 0.5; }
 }
 
+// ── KPI grid header (hide/show toggle) ────────────────────────────────────────
+.kpi-grid-header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 4px;
+}
+.hide-values-btn {
+  color: var(--text-3);
+  transition: color 0.2s;
+  &:hover { color: var(--text-2); }
+}
+
 // ── KPI grid ──────────────────────────────────────────────────────────────────
 .kpi-grid {
   display: grid;
@@ -479,6 +491,11 @@
   gap: 12px;
   flex-wrap: wrap;
   margin-bottom: 28px;
+
+  @media (max-width: 480px) {
+    gap: 8px;
+    .qa-btn { font-size: 0.8rem !important; padding: 6px 12px !important; }
+  }
 
   .qa-btn {
     display: flex;
@@ -1053,6 +1070,9 @@
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 14px;
   margin-bottom: 32px;
+  // Reservar altura mínima para evitar CLS cuando carga async
+  min-height: 160px;
+  contain: layout;
 }
 
 .inst-card {

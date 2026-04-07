@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -v \"^total\\\\|^d.*\\\\.\\\\.$\")",
+      "Bash(python import_bcv_rates.py)",
+      "Bash(pip install:*)",
+      "Bash(set PYTHONIOENCODING=utf-8)",
+      "Bash(python -c \"import os; os.environ['PYTHONIOENCODING']='utf-8'\")",
+      "Bash(python -X utf8 import_bcv_rates.py)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('Name:', d.get\\('name'\\)\\); print\\('Angular:', d.get\\('dependencies',{}\\).get\\('@angular/core','?'\\)\\)\")",
+      "Bash(gcloud logging:*)"
+    ]
+  }
+}

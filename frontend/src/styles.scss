@@ -5,6 +5,42 @@ html, body {
   font-family: 'Inter', Roboto, "Helvetica Neue", sans-serif;
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
   color: #ffffff;
+  -webkit-text-size-adjust: 100%;
+}
+
+// Responsive base
+* {
+  box-sizing: border-box;
+}
+
+img, video, canvas, svg {
+  max-width: 100%;
+  height: auto;
+}
+
+// Better touch targets on mobile
+@media (max-width: 768px) {
+  button, [role="button"], a {
+    min-height: 44px;
+  }
+  .mat-mdc-icon-button {
+    min-height: 44px !important;
+    min-width: 44px !important;
+  }
+}
+
+// Material Dialog responsive
+@media (max-width: 600px) {
+  .mat-mdc-dialog-container {
+    border-radius: 12px !important;
+  }
+  .cdk-overlay-pane {
+    max-width: 96vw !important;
+    max-height: 90vh !important;
+  }
+  .mat-mdc-dialog-content {
+    max-height: 65vh !important;
+  }
 }
 
 // Custom Scrollbar

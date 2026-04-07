@@ -86,6 +86,7 @@ interface CompanyInfo {
 export class DashboardComponent implements OnInit, OnDestroy {
   sidebarOpen = false;
   loading = true;
+  hideValues = false;
   supportOpen = false;
   supportMessage = '';
   sendingSupport = false;

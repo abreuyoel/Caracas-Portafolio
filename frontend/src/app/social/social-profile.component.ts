@@ -103,9 +103,13 @@ export class SocialProfileComponent implements OnInit {
   async loadMyProfile() {
     this.loading = true;
     try {
-      const p = await firstValueFrom(
-        this.http.get<SocialProfile | null>(`${this.api}/social/me`, { headers: this.headers() })
-      );
+      // Parallelizar ambas llamadas en lugar de secuenciarlas
+      const [p] = await Promise.all([
+        firstValueFrom(
+          this.http.get<SocialProfile | null>(`${this.api}/social/me`, { headers: this.headers() })
+        ),
+        this.loadMyHoldings()
+      ]);
       this.profile = p;
       if (p) {
         this.form = { ...p };
@@ -113,8 +117,6 @@ export class SocialProfileComponent implements OnInit {
       } else {
         this.editMode = true;
       }
-      // Cargar mis acciones siempre para el editor
-      await this.loadMyHoldings();
     } catch { this.profile = null; this.editMode = true; }
     finally  { this.loading = false; }
   }

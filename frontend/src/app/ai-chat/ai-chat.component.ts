@@ -16,6 +16,7 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { HttpClient } from '@angular/common/http';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { environment } from '../../environments/environment';
 
 interface Message {
@@ -89,35 +90,43 @@ interface ChatSession {
         </div>
 
         <div class="sessions-list">
-          @for (session of chatSessions; track session.id) {
-            <div class="session-item"
-                 [class.active]="currentSessionId === session.id"
-                 (click)="loadSession(session.id)">
-              <div class="session-info">
-                <mat-icon [style.color]="chatTypeConfig[session.chat_type || 'general']?.color">
-                  {{ chatTypeConfig[session.chat_type || 'general']?.icon }}
-                </mat-icon>
-                <div class="session-details">
-                  <span class="session-title">{{ session.title }}</span>
-                  <div class="session-meta-row">
-                    <span class="type-badge" [style.color]="chatTypeConfig[session.chat_type || 'general']?.color">
-                      {{ chatTypeConfig[session.chat_type || 'general']?.label }}
-                    </span>
-                    <span class="session-meta">· {{ session.message_count }} msg</span>
+          @if (loadingSessions) {
+            <div class="sessions-skeleton">
+              <div class="skeleton-item"></div>
+              <div class="skeleton-item"></div>
+              <div class="skeleton-item"></div>
+            </div>
+          } @else {
+            @for (session of chatSessions; track session.id) {
+              <div class="session-item"
+                   [class.active]="currentSessionId === session.id"
+                   (click)="loadSession(session.id)">
+                <div class="session-info">
+                  <mat-icon [style.color]="chatTypeConfig[session.chat_type || 'general']?.color">
+                    {{ chatTypeConfig[session.chat_type || 'general']?.icon }}
+                  </mat-icon>
+                  <div class="session-details">
+                    <span class="session-title">{{ session.title }}</span>
+                    <div class="session-meta-row">
+                      <span class="type-badge" [style.color]="chatTypeConfig[session.chat_type || 'general']?.color">
+                        {{ chatTypeConfig[session.chat_type || 'general']?.label }}
+                      </span>
+                      <span class="session-meta">· {{ session.message_count }} msg</span>
+                    </div>
                   </div>
                 </div>
+                <button mat-icon-button class="delete-btn"
+                        (click)="deleteSession(session.id, $event)"
+                        matTooltip="Eliminar chat">
+                  <mat-icon>delete</mat-icon>
+                </button>
               </div>
-              <button mat-icon-button class="delete-btn"
-                      (click)="deleteSession(session.id, $event)"
-                      matTooltip="Eliminar chat">
-                <mat-icon>delete</mat-icon>
-              </button>
-            </div>
-          } @empty {
-            <div class="empty-sessions">
-              <mat-icon>history</mat-icon>
-              <p>No hay chats anteriores</p>
-            </div>
+            } @empty {
+              <div class="empty-sessions">
+                <mat-icon>history</mat-icon>
+                <p>No hay chats anteriores</p>
+              </div>
+            }
           }
         </div>
       </div>
@@ -152,12 +161,7 @@ interface ChatSession {
         </mat-toolbar>
 
         <div class="chat-content" #chatContent>
-          @if (loadingSessions) {
-            <div class="loading-state">
-              <mat-spinner diameter="40"></mat-spinner>
-              <p>Cargando historial...</p>
-            </div>
-          } @else if (messages.length === 0) {
+          @if (messages.length === 0) {
             <div class="welcome-state">
               @if (currentChatType === 'portfolio') {
                 <div class="welcome-avatar" style="background:linear-gradient(135deg,rgba(45,217,148,0.2),rgba(0,229,195,0.1));border-color:rgba(45,217,148,0.35)">💼</div>
@@ -291,7 +295,7 @@ interface ChatSession {
                     {{ message.isUser ? '👤' : '🤖' }}
                   </div>
                   <div class="message-bubble">
-                    <p>{{ message.text }}</p>
+                    <div class="message-content" [innerHTML]="message.isUser ? message.text : renderMarkdown(message.text)"></div>
                     <span class="message-time">{{ message.timestamp | date:'HH:mm' }}</span>
                     @if (message.modelUsed) {
                       <span class="model-badge">{{ message.modelUsed }}</span>
@@ -508,6 +512,7 @@ interface ChatSession {
       color: rgba(255, 255, 255, 0.9);
       font-size: 0.95rem;
       font-weight: 500;
+      font-family: 'Inter', 'Roboto', 'Helvetica Neue', sans-serif;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -530,6 +535,26 @@ interface ChatSession {
 
     .sessions-list .session-item:hover .delete-btn {
       opacity: 1;
+    }
+
+    .sessions-skeleton {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 8px 12px;
+    }
+
+    .sessions-skeleton .skeleton-item {
+      height: 56px;
+      border-radius: 10px;
+      background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
     }
 
     .sessions-list .empty-sessions {
@@ -822,6 +847,40 @@ interface ChatSession {
       word-wrap: break-word;
     }
 
+    /* Markdown rendered content */
+    .message-content {
+      color: rgba(255, 255, 255, 0.95);
+      line-height: 1.65;
+      word-wrap: break-word;
+      font-family: 'Inter', 'Roboto', sans-serif;
+    }
+    .message-content p { margin: 0 0 10px; }
+    .message-content p:last-child { margin-bottom: 0; }
+    .message-content h1, .message-content h2, .message-content h3 {
+      color: #fff;
+      margin: 14px 0 6px;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+    .message-content h1 { font-size: 1.15rem; }
+    .message-content h2 { font-size: 1.05rem; }
+    .message-content h3 { font-size: 0.95rem; color: #a5b4fc; }
+    .message-content strong { color: #fff; font-weight: 700; }
+    .message-content em { color: rgba(255,255,255,0.8); font-style: italic; }
+    .message-content ul {
+      margin: 6px 0 10px;
+      padding-left: 20px;
+    }
+    .message-content li {
+      margin-bottom: 4px;
+      color: rgba(255,255,255,0.9);
+    }
+    .message-content hr {
+      border: none;
+      border-top: 1px solid rgba(255,255,255,0.15);
+      margin: 14px 0;
+    }
+
     .message .message-bubble .message-time {
       display: block;
       margin-top: 8px;
@@ -954,8 +1013,43 @@ export class AiChatComponent implements OnInit, OnDestroy {
 
   constructor(
     private http: HttpClient,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private sanitizer: DomSanitizer
   ) { }
+
+  /** Convierte Markdown básico a HTML seguro para renderizar respuestas de IA */
+  renderMarkdown(text: string): SafeHtml {
+    if (!text) return this.sanitizer.bypassSecurityTrustHtml('');
+    let html = text
+      // Headers
+      .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+      .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+      .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+      // Bold + italic
+      .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      // Horizontal rule
+      .replace(/^---+$/gm, '<hr>')
+      // Unordered list items
+      .replace(/^\s*\*\s+(.+)$/gm, '<li>$1</li>')
+      .replace(/^\s*-\s+(.+)$/gm, '<li>$1</li>')
+      // Ordered list items
+      .replace(/^\d+\.\s+(.+)$/gm, '<li>$1</li>')
+      // Wrap consecutive <li> in <ul>
+      .replace(/(<li>[\s\S]*?<\/li>)(\s*<li>[\s\S]*?<\/li>)*/g, (match) => `<ul>${match}</ul>`)
+      // Paragraphs (double newline → <p>)
+      .replace(/\n{2,}/g, '</p><p>')
+      // Single newline → <br>
+      .replace(/\n/g, '<br>')
+      // Wrap everything in <p>
+    html = `<p>${html}</p>`;
+    // Fix <ul> wrapped inside <p>
+    html = html.replace(/<p>(<ul>[\s\S]*?<\/ul>)<\/p>/g, '$1');
+    html = html.replace(/<p>(<h[1-6]>[\s\S]*?<\/h[1-6]>)<\/p>/g, '$1');
+    html = html.replace(/<p>(<hr>)<\/p>/g, '$1');
+    return this.sanitizer.bypassSecurityTrustHtml(html);
+  }
 
   ngOnInit(): void {
     this.loadChatSessions();

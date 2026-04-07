@@ -350,11 +350,73 @@ section { padding: 0 32px; margin-top: 36px; }
   .charts-grid.charts-grid--sub { grid-template-columns: 1fr; }
 }
 
+// ── Mobile navigation ────────────────────────────────────────────────────────
+.mobile-topbar {
+  display: none;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--bg-mid);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  height: 48px;
+}
+.mobile-back-btn {
+  display: flex;
+  align-items: center;
+  color: #fff;
+  text-decoration: none;
+  padding: 4px;
+  border-radius: 6px;
+  &:hover { background: rgba(255,255,255,0.08); }
+}
+.mobile-topbar-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+}
+.mobile-bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: 60px;
+  background: var(--bg-mid);
+  border-top: 1px solid rgba(255,255,255,0.08);
+  z-index: 1000;
+  align-items: center;
+  justify-content: space-around;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.mbn-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  color: rgba(255,255,255,0.5);
+  text-decoration: none;
+  font-size: 10px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: color 0.2s;
+  &.active { color: #4C62FF; }
+  &:hover { color: #fff; }
+}
+
 @media (max-width: 768px) {
   section { padding: 0 16px; }
-  .pf-toolbar { padding: 12px 16px; }
+  .pf-toolbar { padding: 12px 16px; gap: 8px; }
   .toolbar-badge { display: none; }
+  .bcv-pill { display: none; }
   .kpi-grid { grid-template-columns: 1fr 1fr; }
   .spotlight-grid { grid-template-columns: 1fr; }
-  .table-container { font-size: 0.8rem; }
+  .table-container { font-size: 0.8rem; overflow-x: auto; }
+}
+@media (max-width: 480px) {
+  section { padding: 0 12px; margin-top: 24px; }
+  .pf-toolbar h1 { font-size: 1rem; }
+  .kpi-grid { grid-template-columns: 1fr; gap: 10px; }
+  .kpi-value { font-size: 1.2rem !important; }
+  .insight-cards { grid-template-columns: 1fr !important; }
+  .mobile-topbar { display: flex; }
+  .mobile-bottom-nav { display: flex; }
+  .pf-container { padding-bottom: 60px; }
 }

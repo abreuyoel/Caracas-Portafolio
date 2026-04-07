@@ -3,6 +3,7 @@ from typing import Optional, List, Dict
 from datetime import datetime
 from decimal import Decimal
 import json
+import asyncio
 from app.config import settings
 import logging
 
@@ -12,7 +13,7 @@ class AIAgent:
     def __init__(self):
         """Inicializar el agente de IA con Gemini"""
         try:
-            genai.configure(api_key=settings.gemini_api_key)
+            genai.configure(api_key=settings.gemini_api_key_clean, transport="rest")
             self.model = genai.GenerativeModel(settings.gemini_model)
             self.chat = None
             logger.info("✅ Gemini AI initialized successfully")
@@ -88,7 +89,7 @@ class AIAgent:
         """
         
         try:
-            response = self.model.generate_content(prompt)
+            response = await asyncio.to_thread(self.model.generate_content, prompt)
             # Extraer JSON de la respuesta
             return self._parse_json_response(response.text)
         except Exception as e:
@@ -127,7 +128,7 @@ class AIAgent:
         """
         
         try:
-            response = self.model.generate_content(prompt)
+            response = await asyncio.to_thread(self.model.generate_content, prompt)
             return {"advice": response.text, "stock": stock_symbol}
         except Exception as e:
             logger.error(f"Error getting investment advice: {e}")
@@ -163,7 +164,7 @@ class AIAgent:
         """
         
         try:
-            response = self.model.generate_content(prompt)
+            response = await asyncio.to_thread(self.model.generate_content, prompt)
             return response.text
         except Exception as e:
             logger.error(f"Error generating market summary: {e}")
@@ -239,7 +240,7 @@ class AIAgent:
         """
         
         try:
-            response = self.model.generate_content(prompt)
+            response = await asyncio.to_thread(self.model.generate_content, prompt)
             anomalies = self._parse_json_response(response.text)
             return anomalies if isinstance(anomalies, list) else []
         except Exception as e:

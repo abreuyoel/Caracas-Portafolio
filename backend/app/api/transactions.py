@@ -207,6 +207,7 @@ async def get_transactions(
                 bcv_rate=float(t.bcv_rate) if t.bcv_rate else None,
                 amount_usd=float(t.amount_usd) if t.amount_usd else None,
                 transaction_date=t.transaction_date,
+                brokerage=t.brokerage,
                 notes=encryption_service.decrypt(t.notes) if t.notes else "",
                 stock_symbol=stock.symbol if stock else "N/A",
                 stock_name=stock.name if stock else "N/A",
@@ -592,12 +593,13 @@ async def get_transaction(
             bcv_rate=float(transaction.bcv_rate) if transaction.bcv_rate else None,
             amount_usd=float(transaction.amount_usd) if transaction.amount_usd else None,
             transaction_date=transaction.transaction_date,
+            brokerage=getattr(transaction, 'brokerage', None),
             notes=transaction.notes,
             stock_symbol=stock.symbol if stock else "N/A",
             stock_name=stock.name if stock else "N/A",
             created_at=str(transaction.created_at) if transaction.created_at else ""
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:

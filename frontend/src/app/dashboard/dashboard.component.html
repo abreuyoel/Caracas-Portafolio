@@ -116,6 +116,12 @@
       <p>Cargando tu portafolio…</p>
     </div>
     } @else {
+    <div class="kpi-grid-header">
+      <button mat-icon-button class="hide-values-btn" (click)="hideValues = !hideValues"
+        [matTooltip]="hideValues ? 'Mostrar valores' : 'Ocultar valores'">
+        <mat-icon>{{ hideValues ? 'visibility_off' : 'visibility' }}</mat-icon>
+      </button>
+    </div>
     <div class="kpi-grid">
       <div class="kpi-card kpi-card--primary" [class.kpi-card--up]="portfolioSummary.unrealized_pnl_pct >= 0"
         [class.kpi-card--dn]="portfolioSummary.unrealized_pnl_pct < 0">
@@ -123,13 +129,11 @@
         <div class="kpi-card__icon">💰</div>
         <div class="kpi-card__body">
           <span class="kpi-card__label">Valor Total</span>
-          <span class="kpi-card__value">{{ portfolioSummary.current_value_usd | currency:'USD':'symbol':'1.2-2'
-            }}</span>
+          <span class="kpi-card__value">{{ hideValues ? '••••••' : (portfolioSummary.current_value_usd | currency:'USD':'symbol':'1.2-2') }}</span>
           <span class="kpi-card__badge" [class.badge--up]="portfolioSummary.unrealized_pnl_pct >= 0"
             [class.badge--dn]="portfolioSummary.unrealized_pnl_pct < 0">
             <mat-icon>{{ portfolioSummary.unrealized_pnl_pct >= 0 ? 'trending_up' : 'trending_down' }}</mat-icon>
-            {{ portfolioSummary.unrealized_pnl_pct >= 0 ? '+' : '' }}{{ portfolioSummary.unrealized_pnl_pct |
-            number:'1.2-2' }}%
+            {{ hideValues ? '••••' : ((portfolioSummary.unrealized_pnl_pct >= 0 ? '+' : '') + (portfolioSummary.unrealized_pnl_pct | number:'1.2-2') + '%') }}
           </span>
         </div>
       </div>
@@ -137,8 +141,7 @@
         <div class="kpi-card__icon">📈</div>
         <div class="kpi-card__body">
           <span class="kpi-card__label">Capital Invertido</span>
-          <span class="kpi-card__value">{{ portfolioSummary.total_invested_usd | currency:'USD':'symbol':'1.2-2'
-            }}</span>
+          <span class="kpi-card__value">{{ hideValues ? '••••••' : (portfolioSummary.total_invested_usd | currency:'USD':'symbol':'1.2-2') }}</span>
         </div>
       </div>
       <div class="kpi-card" [class.kpi-card--up]="portfolioSummary.unrealized_pnl_usd >= 0"
@@ -148,8 +151,7 @@
           <span class="kpi-card__label">Ganancia / Pérdida</span>
           <span class="kpi-card__value" [class.positive]="portfolioSummary.unrealized_pnl_usd >= 0"
             [class.negative]="portfolioSummary.unrealized_pnl_usd < 0">
-            {{ portfolioSummary.unrealized_pnl_usd >= 0 ? '+' : '' }}{{ portfolioSummary.unrealized_pnl_usd |
-            currency:'USD':'symbol':'1.2-2' }}
+            {{ hideValues ? '••••••' : ((portfolioSummary.unrealized_pnl_usd >= 0 ? '+' : '') + (portfolioSummary.unrealized_pnl_usd | currency:'USD':'symbol':'1.2-2')) }}
           </span>
         </div>
       </div>
@@ -157,7 +159,7 @@
         <div class="kpi-card__icon">📦</div>
         <div class="kpi-card__body">
           <span class="kpi-card__label">Posiciones Abiertas</span>
-          <span class="kpi-card__value">{{ portfolioSummary.total_positions }}</span>
+          <span class="kpi-card__value">{{ hideValues ? '•' : portfolioSummary.total_positions }}</span>
         </div>
       </div>
     </div>

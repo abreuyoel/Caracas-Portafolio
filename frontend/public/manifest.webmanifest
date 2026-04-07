@@ -1,6 +1,10 @@
 {
-  "name": "investment-app",
-  "short_name": "investment-app",
+  "name": "Caracas Portafolio",
+  "short_name": "CaracasP",
+  "description": "Gestión de portafolio de inversiones en la Bolsa de Valores de Caracas",
+  "theme_color": "#4c62ff",
+  "background_color": "#1a1a2e",
+  "lang": "es",
   "display": "standalone",
   "scope": "./",
   "start_url": "./",

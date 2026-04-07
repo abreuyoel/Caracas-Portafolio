@@ -616,7 +616,7 @@ export class GraficosComponent implements OnInit, OnDestroy, AfterViewInit {
     ).subscribe({
       next: (res: any) => {
         this.marketOpen = res.market_open || false;
-        if (!res.market_open || !res.candle) return;
+        if (!res.candle) return;
         const live = res.candle;
         this.liveCandle = live;
         const idx = this.candles.findIndex(c => c.time === live.time);

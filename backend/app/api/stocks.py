@@ -339,7 +339,7 @@ async def get_bcv_rates(
         if today_iso not in rates_dict:
             from app.services.bcv_daily_service import _scrape_bcv_home, save_bcv_rate_to_db
             try:
-                scraped = _scrape_bcv_home()
+                scraped = await _scrape_bcv_home()
                 if scraped:
                     await save_bcv_rate_to_db(scraped["date"], scraped["rate"])
                     rates_dict[scraped["date"]] = scraped["rate"]
@@ -1058,7 +1058,7 @@ async def get_historical_bcv_rates(
             if today_iso not in _historical_rates_cache:
                 from app.services.bcv_daily_service import _scrape_bcv_home, save_bcv_rate_to_db
                 try:
-                    scraped = _scrape_bcv_home()
+                    scraped = await _scrape_bcv_home()
                     if scraped:
                         await save_bcv_rate_to_db(scraped["date"], scraped["rate"])
                         _historical_rates_cache[scraped["date"]] = scraped["rate"]

@@ -86,9 +86,23 @@ export class PortfolioComponent implements OnInit, OnDestroy {
 
   constructor(private http: HttpClient) {}
 
-  ngOnInit() { this.fetchAnalytics(); }
+  private pollInterval: any;
 
-  ngOnDestroy() { this.chartInstances.forEach(c => c.destroy()); }
+  ngOnInit() {
+    this.fetchAnalytics();
+    this.startPolling();
+  }
+
+  ngOnDestroy() {
+    this.chartInstances.forEach(c => c.destroy());
+    if (this.pollInterval) clearInterval(this.pollInterval);
+  }
+
+  startPolling() {
+    this.pollInterval = setInterval(() => {
+      this.fetchAnalytics();
+    }, 30000); // 30 seconds
+  }
 
   setInterval(interval: 'daily' | 'weekly' | 'monthly') {
     this.currentInterval = interval;
@@ -97,7 +111,15 @@ export class PortfolioComponent implements OnInit, OnDestroy {
 
   fetchAnalytics() {
     this.http.get<AnalyticsData>(`${environment.apiUrl}/portfolio/analytics`).subscribe({
-      next: (res) => { this.data = res; this.loading = false; this.tryInitCharts(0); },
+      next: (res) => {
+        this.data = res;
+        this.loading = false;
+        if (this.chartInstances.length === 0) {
+          this.tryInitCharts(0);
+        } else {
+          this.initCharts();
+        }
+      },
       error: ()    => { this.loading = false; }
     });
   }

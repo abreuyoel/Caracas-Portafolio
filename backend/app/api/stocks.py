@@ -323,11 +323,30 @@ async def get_bcv_rates(
     user_id: UUID = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db)
 ):
-    """Retorna todas las tasas BCV disponibles como {fecha: tasa}"""
+    """Retorna todas las tasas BCV disponibles como {fecha: tasa}.
+       Scrapea la tasa actual si el día de hoy no está en la BD.
+    """
     try:
+        from datetime import datetime, timezone, timedelta
+        tz_ve = timezone(timedelta(hours=-4))
+        today_iso = datetime.now(tz_ve).date().isoformat()
+
         result = await db.execute(select(BcvRate).order_by(BcvRate.rate_date))
         rates = result.scalars().all()
-        return {r.rate_date.isoformat(): float(r.rate) for r in rates}
+
+        rates_dict = {r.rate_date.isoformat(): float(r.rate) for r in rates}
+
+        if today_iso not in rates_dict:
+            from app.services.bcv_daily_service import _scrape_bcv_home, save_bcv_rate_to_db
+            try:
+                scraped = _scrape_bcv_home()
+                if scraped:
+                    await save_bcv_rate_to_db(scraped["date"], scraped["rate"])
+                    rates_dict[scraped["date"]] = scraped["rate"]
+            except Exception as scrape_err:
+                logger.error(f"Error scraping fallback BCV rate: {scrape_err}")
+
+        return rates_dict
     except Exception as e:
         logger.error(f"❌ Error getting BCV rates: {e}")
         return {}
@@ -1019,12 +1038,33 @@ async def get_historical_bcv_rates(
 ):
     """Return all historical USD rates from the database (bcv_rates table)."""
     global _historical_rates_cache, _historical_rates_cache_time
+
+    from datetime import datetime, timezone, timedelta
+    tz_ve = timezone(timedelta(hours=-4))
+    today_iso = datetime.now(tz_ve).date().isoformat()
+
     now = time.time()
+
+    # Invalidate cache if today is missing to force a fresh DB query/scrape
+    if _historical_rates_cache is not None and today_iso not in _historical_rates_cache:
+        _historical_rates_cache = None
+
     if _historical_rates_cache is None or (now - _historical_rates_cache_time) > CACHE_TTL:
         try:
             result = await db.execute(select(BcvRate).order_by(BcvRate.rate_date))
             rates = result.scalars().all()
             _historical_rates_cache = {r.rate_date.isoformat(): float(r.rate) for r in rates}
+
+            if today_iso not in _historical_rates_cache:
+                from app.services.bcv_daily_service import _scrape_bcv_home, save_bcv_rate_to_db
+                try:
+                    scraped = _scrape_bcv_home()
+                    if scraped:
+                        await save_bcv_rate_to_db(scraped["date"], scraped["rate"])
+                        _historical_rates_cache[scraped["date"]] = scraped["rate"]
+                except Exception as scrape_err:
+                    logger.error(f"Error scraping fallback BCV rate: {scrape_err}")
+
         except Exception as e:
             logger.error(f"Error loading historical BCV rates from DB: {e}")
             _historical_rates_cache = {}

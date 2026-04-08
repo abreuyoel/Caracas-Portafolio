@@ -117,7 +117,7 @@
     </div>
     } @else {
     <div class="kpi-grid-header">
-      <button mat-icon-button class="hide-values-btn" (click)="hideValues = !hideValues"
+      <button mat-icon-button class="hide-values-btn" (click)="toggleHideValues()"
         [matTooltip]="hideValues ? 'Mostrar valores' : 'Ocultar valores'">
         <mat-icon>{{ hideValues ? 'visibility_off' : 'visibility' }}</mat-icon>
       </button>

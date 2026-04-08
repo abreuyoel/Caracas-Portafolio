@@ -28,6 +28,11 @@
       </div>
       <span class="spacer"></span>
       <div class="toolbar-badge">
+        <button mat-icon-button class="hide-values-btn" (click)="toggleHideValues()" [matTooltip]="hideValues ? 'Mostrar valores' : 'Ocultar valores'">
+          <mat-icon>{{ hideValues ? 'visibility_off' : 'visibility' }}</mat-icon>
+        </button>
+      </div>
+      <div class="toolbar-badge">
         <mat-icon>verified</mat-icon>
         <span>WAC · Costo Promedio Ponderado</span>
       </div>
@@ -45,7 +50,7 @@
         <div class="kpi-icon">📊</div>
         <div class="kpi-body">
           <span class="kpi-label">Capital Invertido</span>
-          <span class="kpi-value">${{ data.summary.total_invested_usd | number:'1.2-2' }}</span>
+          <span class="kpi-value">{{ hideValues ? '••••••' : ('$' + (data.summary.total_invested_usd | number:'1.2-2')) }}</span>
           <span class="kpi-sub">{{ data.performance_by_stock.length }} símbolo(s)</span>
         </div>
       </div>
@@ -55,10 +60,10 @@
         <div class="kpi-body">
           <span class="kpi-label">P&L Total</span>
           <span class="kpi-value" [class.txt-up]="totalPnl >= 0" [class.txt-dn]="totalPnl < 0">
-            {{ totalPnl >= 0 ? '+' : '' }}${{ totalPnl | number:'1.2-2' }}
+            {{ hideValues ? '••••••' : ((totalPnl >= 0 ? '+' : '') + '$' + (totalPnl | number:'1.2-2')) }}
           </span>
           <span class="kpi-sub" [class.txt-up]="totalPnlPct >= 0" [class.txt-dn]="totalPnlPct < 0">
-            {{ totalPnlPct >= 0 ? '+' : '' }}{{ totalPnlPct | number:'1.1-1' }}% ROI
+            {{ hideValues ? '••••' : ((totalPnlPct >= 0 ? '+' : '') + (totalPnlPct | number:'1.1-1') + '% ROI') }}
           </span>
         </div>
       </div>
@@ -68,7 +73,7 @@
         <div class="kpi-body">
           <span class="kpi-label">Ganancia Realizada</span>
           <span class="kpi-value" [class.txt-up]="data.summary.total_realized_pnl >= 0" [class.txt-dn]="data.summary.total_realized_pnl < 0">
-            {{ data.summary.total_realized_pnl >= 0 ? '+' : '' }}${{ data.summary.total_realized_pnl | number:'1.2-2' }}
+            {{ hideValues ? '••••••' : ((data.summary.total_realized_pnl >= 0 ? '+' : '') + '$' + (data.summary.total_realized_pnl | number:'1.2-2')) }}
           </span>
           <span class="kpi-sub">Ventas cerradas</span>
         </div>
@@ -79,7 +84,7 @@
         <div class="kpi-body">
           <span class="kpi-label">Plusvalía Latente</span>
           <span class="kpi-value" [class.txt-up]="data.summary.total_unrealized_pnl >= 0" [class.txt-dn]="data.summary.total_unrealized_pnl < 0">
-            {{ data.summary.total_unrealized_pnl >= 0 ? '+' : '' }}${{ data.summary.total_unrealized_pnl | number:'1.2-2' }}
+            {{ hideValues ? '••••••' : ((data.summary.total_unrealized_pnl >= 0 ? '+' : '') + '$' + (data.summary.total_unrealized_pnl | number:'1.2-2')) }}
           </span>
           <span class="kpi-sub">Posiciones abiertas</span>
         </div>
@@ -103,8 +108,8 @@
           <div class="spot-body">
             <span class="spot-eyebrow">Mejor Compra Actual</span>
             <span class="spot-symbol">{{ data.insights.top_holding_gain.symbol }}</span>
-            <span class="spot-value txt-up">+${{ data.insights.top_holding_gain.unrealized_pnl | number:'1.2-2' }} latente</span>
-            <span class="spot-sub">{{ data.insights.top_holding_gain.gain_pct >= 0 ? '+' : '' }}{{ data.insights.top_holding_gain.gain_pct | number:'1.1-1' }}% ROI · {{ data.insights.top_holding_gain.quantity | number }} acciones</span>
+            <span class="spot-value txt-up">{{ hideValues ? '••••••' : ('+$' + (data.insights.top_holding_gain.unrealized_pnl | number:'1.2-2')) }} latente</span>
+            <span class="spot-sub">{{ hideValues ? '••••' : ((data.insights.top_holding_gain.gain_pct >= 0 ? '+' : '') + (data.insights.top_holding_gain.gain_pct | number:'1.1-1') + '% ROI · ' + (data.insights.top_holding_gain.quantity | number) + ' acciones') }}</span>
           </div>
         </div>
       }
@@ -114,8 +119,8 @@
           <div class="spot-body">
             <span class="spot-eyebrow">Mayor Pérdida Latente</span>
             <span class="spot-symbol">{{ data.insights.worst_holding.symbol }}</span>
-            <span class="spot-value txt-dn">${{ data.insights.worst_holding.unrealized_pnl | number:'1.2-2' }}</span>
-            <span class="spot-sub">{{ data.insights.worst_holding.gain_pct | number:'1.1-1' }}% ROI · {{ data.insights.worst_holding.quantity | number }} acciones</span>
+            <span class="spot-value txt-dn">{{ hideValues ? '••••••' : ('-$' + (Math.abs(data.insights.worst_holding.unrealized_pnl) | number:'1.2-2')) }} latente</span>
+            <span class="spot-sub">{{ hideValues ? '••••' : ((data.insights.worst_holding.gain_pct >= 0 ? '+' : '') + (data.insights.worst_holding.gain_pct | number:'1.1-1') + '% ROI · ' + (data.insights.worst_holding.quantity | number) + ' acciones') }}</span>
           </div>
         </div>
       }

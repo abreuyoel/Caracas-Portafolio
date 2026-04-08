@@ -32,21 +32,28 @@ _SESSION.headers.update({
 })
 
 
-def _scrape_bcv_home() -> dict | None:
+async def _scrape_bcv_home() -> dict | None:
     """
     Returns {'date': 'YYYY-MM-DD', 'rate': float} or None.
     Looks for:
       <div id="dolar">...<strong>474,05980000</strong>...</div>
       <span class="date-display-single" content="2026-04-06T00:00:00-04:00">
     """
+    import httpx
     try:
-        resp = _SESSION.get(BCV_HOME, timeout=30, verify=False)
-        resp.raise_for_status()
+        async with httpx.AsyncClient(
+            verify=False,
+            timeout=30,
+            headers=_SESSION.headers
+        ) as client:
+            resp = await client.get(BCV_HOME)
+            resp.raise_for_status()
+            html_text = resp.text
     except Exception as exc:
         logger.error(f"BCV daily: connection error — {exc}")
         return None
 
-    soup = BeautifulSoup(resp.text, "html.parser")
+    soup = BeautifulSoup(html_text, "html.parser")
 
     dolar_div = soup.find("div", id="dolar")
     if not dolar_div:
@@ -104,7 +111,7 @@ async def save_bcv_rate_to_db(iso_date: str, rate: float) -> bool:
 async def fetch_and_save_today_rate() -> None:
     """Full job: scrape + persist. Called by APScheduler."""
     logger.info("⏰ BCV daily rate job started")
-    result = _scrape_bcv_home()
+    result = await _scrape_bcv_home()
     if not result:
         logger.warning("BCV daily job: no data obtained — skipping save")
         return

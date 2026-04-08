@@ -344,6 +344,36 @@ section { padding: 0 32px; margin-top: 36px; }
 .txt-up { color: var(--up); }
 .txt-dn { color: var(--dn); }
 
+// ── Animations ────────────────────────────────────────────────────────────────
+@keyframes flashUp {
+  0% { background-color: rgba(45,217,148, 0.4); }
+  100% { background-color: transparent; }
+}
+
+@keyframes flashDown {
+  0% { background-color: rgba(255,77,106, 0.4); }
+  100% { background-color: transparent; }
+}
+
+.flash-up td {
+  animation: flashUp 1.5s ease-out;
+}
+
+.flash-down td {
+  animation: flashDown 1.5s ease-out;
+}
+
+.live-dot {
+  color: #2dd994;
+  animation: pulseLive 2s infinite;
+}
+
+@keyframes pulseLive {
+  0% { opacity: 1; }
+  50% { opacity: 0.3; }
+  100% { opacity: 1; }
+}
+
 // ── Responsive ───────────────────────────────────────────────────────────────
 @media (max-width: 1100px) {
   .charts-grid.charts-grid--main,

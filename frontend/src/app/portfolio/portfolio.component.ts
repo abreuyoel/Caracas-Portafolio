@@ -79,7 +79,9 @@ export class PortfolioComponent implements OnInit, OnDestroy {
   @ViewChild('orderChart')    orderChartRef!:    ElementRef;
 
   loading = true;
+  hideValues = false;
   data: AnalyticsData | null = null;
+  flashingRows: Record<string, 'up' | 'down'> = {};
   Math = Math;
   currentInterval: 'daily' | 'weekly' | 'monthly' = 'monthly';
   private chartInstances: Chart[] = [];
@@ -89,8 +91,18 @@ export class PortfolioComponent implements OnInit, OnDestroy {
   private pollInterval: any;
 
   ngOnInit() {
+    const savedHide = localStorage.getItem('hideValues');
+    if (savedHide !== null) {
+      this.hideValues = savedHide === 'true';
+    }
+
     this.fetchAnalytics();
     this.startPolling();
+  }
+
+  toggleHideValues(): void {
+    this.hideValues = !this.hideValues;
+    localStorage.setItem('hideValues', String(this.hideValues));
   }
 
   ngOnDestroy() {
@@ -112,6 +124,19 @@ export class PortfolioComponent implements OnInit, OnDestroy {
   fetchAnalytics() {
     this.http.get<AnalyticsData>(`${environment.apiUrl}/portfolio/analytics`).subscribe({
       next: (res) => {
+        // Trigger flash animations if values changed
+        if (this.data && res.performance_by_stock) {
+          res.performance_by_stock.forEach(newSt => {
+            const oldSt = this.data!.performance_by_stock.find(s => s.symbol === newSt.symbol);
+            if (oldSt && newSt.current_value !== oldSt.current_value) {
+              this.flashingRows[newSt.symbol] = newSt.current_value > oldSt.current_value ? 'up' : 'down';
+              setTimeout(() => {
+                delete this.flashingRows[newSt.symbol];
+              }, 2000);
+            }
+          });
+        }
+
         this.data = res;
         this.loading = false;
         if (this.chartInstances.length === 0) {

@@ -926,10 +926,9 @@ async def get_live_candle(
             stock_res = await db.execute(select(Stock).where(Stock.symbol == sym))
             stock = stock_res.scalar_one_or_none()
             if stock:
-                today = datetime.now().date()
                 ph_res = await db.execute(
                     select(PriceHistory)
-                    .where(PriceHistory.stock_id == stock.id, PriceHistory.price_date == today)
+                    .where(PriceHistory.stock_id == stock.id)
                     .order_by(PriceHistory.price_date.desc())
                     .limit(1)
                 )

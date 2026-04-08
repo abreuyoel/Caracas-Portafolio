@@ -509,6 +509,25 @@ class BVCScraper:
             soup = BeautifulSoup(html, 'lxml')
             today_iso = date_type.today().isoformat()
 
+            # Buscar la fecha real del mercado en el header
+            h4_tag = soup.find('h4', class_='text-white')
+            if h4_tag:
+                spans = h4_tag.find_all('span', class_=lambda c: c and '__estado' in c)
+                if len(spans) >= 2:
+                    date_text = spans[1].get_text(strip=True)
+                    try:
+                        # Extraer fecha en formato DD/MM/YYYY y convertir a YYYY-MM-DD
+                        parts = date_text.split('/')
+                        if len(parts) == 3:
+                            day = int(parts[0])
+                            month = int(parts[1])
+                            year = int(parts[2])
+                            if year < 100:
+                                year += 2000
+                            today_iso = f"{year:04d}-{month:02d}-{day:02d}"
+                    except Exception as parse_e:
+                        logger.warning(f"No se pudo parsear fecha del market header '{date_text}': {parse_e}")
+
             rows = soup.select('table tbody tr')
             for row in rows:
                 cells = row.find_all('td')
@@ -603,7 +622,7 @@ class BVCScraper:
                         fec_min_val = await page.get_attribute("#fec_min", "min") or "2021-05-18"
                         fec_max_val = await page.get_attribute("#fec_max", "max")
                         if not fec_max_val:
-                            fec_max_val = (date.today() - timedelta(days=1)).isoformat()
+                            fec_max_val = date.today().isoformat()
 
                         logger.info(f"[{symbol}] Rango histórico disponible: {fec_min_val} → {fec_max_val}")
 
@@ -648,7 +667,7 @@ class BVCScraper:
 
                             # ¿Ya llegamos al día más reciente?
                             last_row_date = all_rows[-1]["date"] if all_rows else None
-                            if last_row_date and last_row_date >= (today - timedelta(days=1)):
+                            if last_row_date and last_row_date >= today:
                                 logger.info(f"[{symbol}] Alcanzamos la fecha más reciente ({last_row_date}), deteniendo")
                                 break
 
@@ -855,8 +874,7 @@ async def get_full_price_history(self, symbol: str) -> List[Dict]:
                 fec_max_val = page.get_attribute("#fec_max", "max")
  
                 if not fec_max_val:
-                    # Fallback: ayer (el sitio no guarda el día en curso)
-                    fec_max_val = (date.today() - timedelta(days=1)).isoformat()
+                    fec_max_val = date.today().isoformat()
  
                 logger.info(f"[{symbol}] Rango histórico disponible: {fec_min_val} → {fec_max_val}")
  
@@ -904,7 +922,7 @@ async def get_full_price_history(self, symbol: str) -> List[Dict]:
  
                     # ¿Ya llegamos al día más reciente?
                     last_row_date = all_rows[-1]["date"] if all_rows else None
-                    if last_row_date and last_row_date >= (today - timedelta(days=1)):
+                    if last_row_date and last_row_date >= today:
                         logger.info(f"[{symbol}] Alcanzamos la fecha más reciente ({last_row_date}), deteniendo")
                         break
  

@@ -507,12 +507,16 @@ class BVCScraper:
                 html = resp.text
 
             soup = BeautifulSoup(html, 'lxml')
-            today_iso = date_type.today().isoformat()
 
+            from datetime import datetime, timezone, timedelta
+            tz_ve = timezone(timedelta(hours=-4))
+            today_iso = datetime.now(tz_ve).date().isoformat()
+
+            import re
             # Buscar la fecha real del mercado en el header
             h4_tag = soup.find('h4', class_='text-white')
             if h4_tag:
-                spans = h4_tag.find_all('span', class_=lambda c: c and '__estado' in c)
+                spans = h4_tag.find_all('span', class_=re.compile(r'__estado'))
                 if len(spans) >= 2:
                     date_text = spans[1].get_text(strip=True)
                     try:
@@ -869,12 +873,16 @@ async def get_full_price_history(self, symbol: str) -> List[Dict]:
                     timeout=15_000,
                 )
  
+                from datetime import datetime, timezone, timedelta
+                tz_ve = timezone(timedelta(hours=-4))
+                today_ven = datetime.now(tz_ve).date()
+
                 # 2. Leer rango de fechas disponible en el calendario
                 fec_min_val = page.get_attribute("#fec_min", "min") or "2021-05-18"
                 fec_max_val = page.get_attribute("#fec_max", "max")
  
                 if not fec_max_val:
-                    fec_max_val = date.today().isoformat()
+                    fec_max_val = today_ven.isoformat()
  
                 logger.info(f"[{symbol}] Rango histórico disponible: {fec_min_val} → {fec_max_val}")
  
@@ -895,7 +903,6 @@ async def get_full_price_history(self, symbol: str) -> List[Dict]:
                 )
  
                 # 5. Paginar acumulando filas
-                today = date.today()
                 page_num = 0
  
                 while True:
@@ -922,7 +929,7 @@ async def get_full_price_history(self, symbol: str) -> List[Dict]:
  
                     # ¿Ya llegamos al día más reciente?
                     last_row_date = all_rows[-1]["date"] if all_rows else None
-                    if last_row_date and last_row_date >= today:
+                    if last_row_date and last_row_date >= today_ven:
                         logger.info(f"[{symbol}] Alcanzamos la fecha más reciente ({last_row_date}), deteniendo")
                         break
  

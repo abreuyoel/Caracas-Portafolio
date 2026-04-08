@@ -31,18 +31,30 @@ MONTH_MAP = {
 
 
 def _parse_bvc_date(date_str: str) -> Optional[datetime]:
-    """Convierte '16-JAN-26' → datetime(2026, 1, 16)."""
+    """Convierte '16-JAN-26' o '16/01/2026' → datetime(2026, 1, 16)."""
+    date_str = date_str.strip()
     try:
-        parts = date_str.strip().split('-')
-        if len(parts) != 3:
-            return None
-        day = int(parts[0])
-        month = MONTH_MAP.get(parts[1].upper())
-        year_short = int(parts[2])
-        year = 2000 + year_short if year_short < 100 else year_short
-        if not month:
-            return None
-        return datetime(year, month, day)
+        if '/' in date_str:
+            parts = date_str.split('/')
+            if len(parts) != 3:
+                return None
+            day = int(parts[0])
+            month = int(parts[1])
+            year = int(parts[2])
+            if year < 100:
+                year += 2000
+            return datetime(year, month, day)
+        else:
+            parts = date_str.split('-')
+            if len(parts) != 3:
+                return None
+            day = int(parts[0])
+            month = MONTH_MAP.get(parts[1].upper())
+            year_short = int(parts[2])
+            year = 2000 + year_short if year_short < 100 else year_short
+            if not month:
+                return None
+            return datetime(year, month, day)
     except Exception:
         return None
 
@@ -451,6 +463,7 @@ class BVCScraper:
         """
         Obtiene la vela live del día actual desde market.bolsadecaracas.com
         usando httpx (sin Playwright — el sitio renderiza SSR sin JS).
+        Returns None if market is closed or data is unavailable.
 
         Columnas de la tabla (0-indexed):
           0  logo img (alt=símbolo)

@@ -550,23 +550,35 @@ _MONTH_MAP = {
 }
 
 def _bvc_date_iso(date_str: str) -> str | None:
-    """Convierte '20-MAR-26' → '2026-03-20'"""
+    """Convierte '20-MAR-26' o '20/03/2026' → '2026-03-20'"""
+    date_str = date_str.strip()
     try:
-        parts = date_str.strip().split('-')
-        if len(parts) != 3:
-            return None
-        day   = int(parts[0])
-        month = _MONTH_MAP.get(parts[1].upper())
-        year_s= int(parts[2])
-        year  = 2000 + year_s if year_s < 100 else year_s
-        if not month:
-            return None
-        return f"{year:04d}-{month:02d}-{day:02d}"
+        if '/' in date_str:
+            parts = date_str.split('/')
+            if len(parts) != 3:
+                return None
+            day = int(parts[0])
+            month = int(parts[1])
+            year = int(parts[2])
+            if year < 100:
+                year += 2000
+            return f"{year:04d}-{month:02d}-{day:02d}"
+        else:
+            parts = date_str.split('-')
+            if len(parts) != 3:
+                return None
+            day   = int(parts[0])
+            month = _MONTH_MAP.get(parts[1].upper())
+            year_s= int(parts[2])
+            year  = 2000 + year_s if year_s < 100 else year_s
+            if not month:
+                return None
+            return f"{year:04d}-{month:02d}-{day:02d}"
     except Exception:
         return None
 
 def _bvc_num(s: str) -> float | None:
-    """Parsea número venezolano: '2.180.579,95' → 2180579.95"""
+    """Parsea número venezolano: '2.180.579,95' → 2180579.95. Used by _parse_row and get_stock_history."""
     s = str(s).strip()
     if not s or s == '-':
         return None
@@ -875,35 +887,6 @@ def _adjust_for_reconversion(symbol: str, candles: list) -> list:
         i += 1
     return candles
 
-def _bvc_date_iso(date_str: str) -> str | None:
-    """Convierte '20-MAR-26' → '2026-03-20'"""
-    try:
-        parts = date_str.strip().split('-')
-        if len(parts) != 3:
-            return None
-        day   = int(parts[0])
-        month = _MONTH_MAP.get(parts[1].upper())
-        year_s= int(parts[2])
-        year  = 2000 + year_s if year_s < 100 else year_s
-        if not month:
-            return None
-        return f"{year:04d}-{month:02d}-{day:02d}"
-    except Exception:
-        return None
-
-def _bvc_num(s: str) -> float | None:
-    """Parsea número venezolano: '2.180.579,95' → 2180579.95"""
-    s = str(s).strip()
-    if not s or s == '-':
-        return None
-    if '.' in s and ',' in s:
-        s = s.replace('.', '').replace(',', '.')
-    elif ',' in s:
-        s = s.replace(',', '.')
-    try:
-        return float(s)
-    except Exception:
-        return None
 
 
 
@@ -932,18 +915,18 @@ async def get_live_candle(
 
     if candle:
         logger.info(f"✅ [LIVE] {sym}: O={candle['open']} H={candle['high']} L={candle['low']} C={candle['close']} V={candle['volume']}")
-        # Save the live candle to DB so we have it if the market closes and BVC hasn't updated historical data yet
+        # Guardar en BD para fallback cuando el mercado cierre y el scraper regrese None
         try:
             await _store_price_history(db, sym, [candle])
         except Exception as store_err:
             logger.warning(f"⚠️ [LIVE-STORE] No se pudo guardar vela live en DB: {store_err}")
     else:
-        logger.info(f"⚠️ [LIVE] {sym}: sin movimiento en el endpoint live, intentando recuperar de BD para el día de hoy")
+        logger.info(f"⚠️ [LIVE] {sym}: sin movimiento hoy, intentando fallback desde BD")
         try:
             stock_res = await db.execute(select(Stock).where(Stock.symbol == sym))
             stock = stock_res.scalar_one_or_none()
             if stock:
-                today = date_type.today()
+                today = datetime.now().date()
                 ph_res = await db.execute(
                     select(PriceHistory)
                     .where(PriceHistory.stock_id == stock.id, PriceHistory.price_date == today)

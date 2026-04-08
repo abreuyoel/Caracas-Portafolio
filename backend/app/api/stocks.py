@@ -689,6 +689,22 @@ async def get_stock_history(
         if len(rows) <= 10:
             logger.info(f"📅 {sym}: solo {len(rows)} filas en #ult3, usando calendario/paginación")
             use_calendar = True
+        elif len(rows) > 0:
+            # Comprobar que la fecha más reciente en #ult3 sea de los últimos días (max 3 días).
+            # En ocasiones el sitio BVC desactualiza la tabla #ult3 y se debe consultar el histórico
+            # de movimientos para obtener los días faltantes.
+            from datetime import datetime, timezone, timedelta
+            first_row_cells = rows[0].find_all('td')
+            if first_row_cells:
+                raw_date = first_row_cells[0].get_text(strip=True)
+                date_iso = _bvc_date_iso(raw_date)
+                if date_iso:
+                    last_date = date_type.fromisoformat(date_iso)
+                    tz_ve = timezone(timedelta(hours=-4))
+                    today_ven = datetime.now(tz_ve).date()
+                    if (today_ven - last_date).days > 3:
+                        logger.info(f"📅 {sym}: la última fecha de #ult3 ({date_iso}) está atrasada, usando calendario/paginación")
+                        use_calendar = True
 
         if use_calendar:
             full_history = await bvc_scraper.get_full_price_history(sym)

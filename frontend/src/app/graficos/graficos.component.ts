@@ -671,8 +671,9 @@ export class GraficosComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private getCachedHistory(symbol: string): any[] | null {
     try {
-      const key = `hist_${symbol}`;
-      const tsKey = `hist_${symbol}_ts`;
+      // Usar _v2 para evitar que el navegador muestre velas del 08/04 por un error anterior de fecha
+      const key = `hist_v2_${symbol}`;
+      const tsKey = `hist_v2_${symbol}_ts`;
       const raw = localStorage.getItem(key);
       const ts  = localStorage.getItem(tsKey);
       if (!raw || !ts) return null;
@@ -683,8 +684,8 @@ export class GraficosComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private setCachedHistory(symbol: string, candles: any[]): void {
     try {
-      localStorage.setItem(`hist_${symbol}`,    JSON.stringify(candles));
-      localStorage.setItem(`hist_${symbol}_ts`, String(Date.now()));
+      localStorage.setItem(`hist_v2_${symbol}`,    JSON.stringify(candles));
+      localStorage.setItem(`hist_v2_${symbol}_ts`, String(Date.now()));
     } catch {}
   }
 

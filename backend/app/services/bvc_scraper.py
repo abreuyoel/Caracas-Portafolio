@@ -490,6 +490,7 @@ class BVCScraper:
 
         try:
             async with httpx.AsyncClient(
+                verify=False,
                 timeout=20,
                 follow_redirects=True,
                 headers={

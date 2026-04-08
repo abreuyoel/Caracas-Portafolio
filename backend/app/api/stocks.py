@@ -910,7 +910,8 @@ def _bvc_num(s: str) -> float | None:
 @router.get("/bvc/{symbol}/live")
 async def get_live_candle(
     symbol: str,
-    user_id: UUID = Depends(get_current_user_id)
+    user_id: UUID = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Obtiene la vela del día actual en tiempo real desde market.bolsadecaracas.com.
@@ -927,12 +928,44 @@ async def get_live_candle(
         candle = await bvc_scraper.get_live_candle(sym)
     except Exception as e:
         logger.error(f"❌ [LIVE] Error scraping {sym}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        candle = None
 
     if candle:
         logger.info(f"✅ [LIVE] {sym}: O={candle['open']} H={candle['high']} L={candle['low']} C={candle['close']} V={candle['volume']}")
+        # Save the live candle to DB so we have it if the market closes and BVC hasn't updated historical data yet
+        try:
+            await _store_price_history(db, sym, [candle])
+        except Exception as store_err:
+            logger.warning(f"⚠️ [LIVE-STORE] No se pudo guardar vela live en DB: {store_err}")
     else:
-        logger.info(f"⚠️ [LIVE] {sym}: sin movimiento hoy")
+        logger.info(f"⚠️ [LIVE] {sym}: sin movimiento en el endpoint live, intentando recuperar de BD para el día de hoy")
+        try:
+            stock_res = await db.execute(select(Stock).where(Stock.symbol == sym))
+            stock = stock_res.scalar_one_or_none()
+            if stock:
+                today = date_type.today()
+                ph_res = await db.execute(
+                    select(PriceHistory)
+                    .where(PriceHistory.stock_id == stock.id, PriceHistory.price_date == today)
+                    .order_by(PriceHistory.price_date.desc())
+                    .limit(1)
+                )
+                ph = ph_res.scalar_one_or_none()
+                if ph:
+                    candle = {
+                        'time':   ph.price_date.isoformat(),
+                        'open':   float(ph.open_price or ph.close_price or 0),
+                        'high':   float(ph.high_price or ph.close_price or 0),
+                        'low':    float(ph.low_price or ph.close_price or 0),
+                        'close':  float(ph.close_price or 0),
+                        'volume': int(ph.volume or 0),
+                        'amount': float(ph.amount or 0),
+                        'trades': int(ph.trades or 0),
+                        'is_live': False
+                    }
+                    logger.info(f"📦 [LIVE-DB-FALLBACK] {sym}: Recuperada vela de hoy desde la BD")
+        except Exception as db_err:
+            logger.error(f"❌ [LIVE-DB-FALLBACK] Error consultando BD para {sym}: {db_err}")
 
     return {
         'symbol':      sym,

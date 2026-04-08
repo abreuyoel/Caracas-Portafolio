@@ -149,6 +149,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    const savedHide = localStorage.getItem('hideValues');
+    if (savedHide !== null) {
+      this.hideValues = savedHide === 'true';
+    }
     if (this.authService.isAuthenticated()) {
       this.wsService.connect();
     }
@@ -325,6 +329,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   toggleSidebar(): void {
     this.sidebarOpen = !this.sidebarOpen;
+  }
+
+  toggleHideValues(): void {
+    this.hideValues = !this.hideValues;
+    localStorage.setItem('hideValues', String(this.hideValues));
   }
 
   toggleSupport(): void {

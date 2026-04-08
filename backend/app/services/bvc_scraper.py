@@ -587,7 +587,7 @@ class BVCScraper:
         
     
     
-    async def get_full_price_history(self, symbol: str) -> List[Dict]:
+    async def get_full_price_history(self, symbol: str, start_date: str = None) -> List[Dict]:
         """
         Obtiene el histórico completo de operaciones de una acción desde la
         sección de "Consulta Histórico de Movimientos" del sitio de la BVC,
@@ -598,7 +598,7 @@ class BVCScraper:
             import sys
             from playwright.async_api import async_playwright
             from bs4 import BeautifulSoup
-            from datetime import date, timedelta
+            from datetime import date, timedelta, datetime, timezone
 
             async def scrape() -> List[Dict]:
                 all_rows: List[Dict] = []
@@ -622,11 +622,14 @@ class BVCScraper:
                             timeout=15000,
                         )
 
+                        tz_ve = timezone(timedelta(hours=-4))
+                        today_ven = datetime.now(tz_ve).date()
+
                         # Obtener rango de fechas disponible
-                        fec_min_val = await page.get_attribute("#fec_min", "min") or "2021-05-18"
+                        fec_min_val = start_date or await page.get_attribute("#fec_min", "min") or "2021-05-18"
                         fec_max_val = await page.get_attribute("#fec_max", "max")
                         if not fec_max_val:
-                            fec_max_val = date.today().isoformat()
+                            fec_max_val = today_ven.isoformat()
 
                         logger.info(f"[{symbol}] Rango histórico disponible: {fec_min_val} → {fec_max_val}")
 
@@ -671,7 +674,7 @@ class BVCScraper:
 
                             # ¿Ya llegamos al día más reciente?
                             last_row_date = all_rows[-1]["date"] if all_rows else None
-                            if last_row_date and last_row_date >= today:
+                            if last_row_date and last_row_date >= today_ven:
                                 logger.info(f"[{symbol}] Alcanzamos la fecha más reciente ({last_row_date}), deteniendo")
                                 break
 
@@ -820,170 +823,5 @@ def _consolidate_by_date(rows: List[Dict]) -> List[Dict]:
     return sorted(by_date.values(), key=lambda x: x["date"])
  
  
-# ── función principal ─────────────────────────────────────────────────────────
- 
-async def get_full_price_history(self, symbol: str) -> List[Dict]:
-    """
-    Obtiene el histórico completo de operaciones de una acción desde la
-    sección de "Consulta Histórico de Movimientos" del sitio de la BVC,
-    paginando con el botón "Siguiente" hasta agotar todos los registros.
- 
-    Retorna lista de dicts ordenada cronológicamente:
-      [{'date': date, 'open': float, 'close': float, 'high': float,
-        'low': float, 'trades': int, 'volume': int, 'amount': float}, ...]
-    """
- 
-    def _run() -> List[Dict]:
-        try:
-            from playwright.async_api import async_playwright  # type: ignore[import]
-        except ImportError:
-            logger.error("Playwright no instalado.")
-            return []
- 
-        from bs4 import BeautifulSoup  # type: ignore[import]
- 
-        # Usamos sync_playwright para poder correr en un hilo separado
-        from playwright.sync_api import sync_playwright  # type: ignore[import]
- 
-        all_rows: List[Dict] = []
- 
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            page = browser.new_page()
- 
-            try:
-                # 1. Cargar página y seleccionar símbolo
-                from app.config import settings  # noqa: F401  (solo para confirmar que la app está disponible)
-            except Exception:
-                pass
- 
-            try:
-                BVC_HISTORICOS = "https://www.bolsadecaracas.com/historicos/"
- 
-                page.goto(BVC_HISTORICOS, wait_until="domcontentloaded", timeout=30_000)
-                page.select_option("select#simbolo", symbol)
-                page.click("button#buscar")
- 
-                # Esperar a que se cargue la info de la empresa
-                page.wait_for_function(
-                    """() => {
-                        const info = document.querySelector('#info table tbody tr');
-                        return info && info.textContent.trim().length > 0;
-                    }""",
-                    timeout=15_000,
-                )
- 
-                from datetime import datetime, timezone, timedelta
-                tz_ve = timezone(timedelta(hours=-4))
-                today_ven = datetime.now(tz_ve).date()
-
-                # 2. Leer rango de fechas disponible en el calendario
-                fec_min_val = page.get_attribute("#fec_min", "min") or "2021-05-18"
-                fec_max_val = page.get_attribute("#fec_max", "max")
- 
-                if not fec_max_val:
-                    fec_max_val = today_ven.isoformat()
- 
-                logger.info(f"[{symbol}] Rango histórico disponible: {fec_min_val} → {fec_max_val}")
- 
-                # 3. Establecer rango completo en los inputs de fecha
-                page.fill("#fec_min", fec_min_val)
-                page.fill("#fec_max", fec_max_val)
- 
-                # 4. Click en "Buscar Operaciones"
-                page.click("button#buscar_operaciones")
- 
-                # Esperar a que aparezca la tabla de resultados
-                page.wait_for_function(
-                    """() => {
-                        const tbody = document.querySelector('tbody#resumen_2 tr');
-                        return tbody && tbody.textContent.trim().length > 0;
-                    }""",
-                    timeout=20_000,
-                )
- 
-                # 5. Paginar acumulando filas
-                page_num = 0
- 
-                while True:
-                    page_num += 1
-                    html = page.content()
-                    soup = BeautifulSoup(html, "lxml")
- 
-                    tbody = soup.find("tbody", {"id": "resumen_2"})
-                    if not tbody:
-                        logger.warning(f"[{symbol}] Página {page_num}: tbody#resumen_2 no encontrado")
-                        break
- 
-                    page_rows = tbody.find_all("tr")
-                    if not page_rows:
-                        break
- 
-                    for tr in page_rows:
-                        cells = tr.find_all("td")
-                        parsed = _parse_row(cells)
-                        if parsed:
-                            all_rows.append(parsed)
- 
-                    logger.debug(f"[{symbol}] Página {page_num}: {len(page_rows)} filas acumuladas={len(all_rows)}")
- 
-                    # ¿Ya llegamos al día más reciente?
-                    last_row_date = all_rows[-1]["date"] if all_rows else None
-                    if last_row_date and last_row_date >= today_ven:
-                        logger.info(f"[{symbol}] Alcanzamos la fecha más reciente ({last_row_date}), deteniendo")
-                        break
- 
-                    # Verificar si el botón "Siguiente" existe y está visible
-                    sig_btn = page.query_selector("button#sig")
-                    if not sig_btn:
-                        logger.info(f"[{symbol}] Botón 'Siguiente' no encontrado, fin de paginación")
-                        break
- 
-                    is_visible = sig_btn.is_visible()
-                    is_enabled = sig_btn.is_enabled()
- 
-                    if not is_visible or not is_enabled:
-                        logger.info(f"[{symbol}] Botón 'Siguiente' oculto/deshabilitado, fin de paginación")
-                        break
- 
-                    # Avanzar a la siguiente página
-                    sig_btn.click()
- 
-                    # Esperar a que la tabla se actualice (nueva fila distinta a la actual)
-                    try:
-                        first_cell_text = page_rows[0].find("td").get_text(strip=True)
-                        page.wait_for_function(
-                            f"""() => {{
-                                const first = document.querySelector('tbody#resumen_2 tr td');
-                                return first && first.textContent.trim() !== '{first_cell_text}';
-                            }}""",
-                            timeout=10_000,
-                        )
-                    except Exception:
-                        # Timeout esperando cambio — salir para evitar loop infinito
-                        logger.warning(f"[{symbol}] Timeout esperando actualización de tabla en página {page_num + 1}")
-                        break
- 
-            except Exception as e:
-                logger.error(f"[{symbol}] Error en get_full_price_history: {e}")
-            finally:
-                page.close()
-                browser.close()
- 
-        # 6. Consolidar y ordenar
-        consolidated = _consolidate_by_date(all_rows)
-        logger.info(f"[{symbol}] Histórico completo: {len(consolidated)} días únicos")
-        return consolidated
- 
-    # Ejecutar en thread separado para no bloquear el event loop de FastAPI
-    try:
-        loop = asyncio.get_event_loop()
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            return await loop.run_in_executor(executor, _run)
-    except Exception as e:
-        logger.error(f"❌ get_full_price_history {symbol}: {e}")
-        return []
-    
-    
 # Singleton instance
 bvc_scraper = BVCScraper()

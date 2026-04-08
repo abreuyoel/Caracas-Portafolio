@@ -707,7 +707,27 @@ async def get_stock_history(
                         use_calendar = True
 
         if use_calendar:
-            full_history = await bvc_scraper.get_full_price_history(sym)
+            # Optimización: buscar la última fecha en BD para no descargar desde 2021
+            start_date_str = None
+            try:
+                stock_res = await db.execute(select(Stock).where(Stock.symbol == sym))
+                stock = stock_res.scalar_one_or_none()
+                if stock:
+                    latest_ph_res = await db.execute(
+                        select(PriceHistory)
+                        .where(PriceHistory.stock_id == stock.id)
+                        .order_by(PriceHistory.price_date.desc())
+                        .limit(1)
+                    )
+                    latest_ph = latest_ph_res.scalar_one_or_none()
+                    if latest_ph:
+                        # Restamos 5 días para asegurar solapamiento y no perder datos
+                        overlap_date = latest_ph.price_date - timedelta(days=5)
+                        start_date_str = overlap_date.isoformat()
+            except Exception as db_err:
+                logger.warning(f"⚠️ Error buscando latest price para {sym}, descargando full: {db_err}")
+
+            full_history = await bvc_scraper.get_full_price_history(sym, start_date=start_date_str)
             if not full_history:
                 logger.warning(f"⚠️ No se obtuvo historial completo para {sym}, usando fallback #ult3")
                 return await _fallback_history(sym)

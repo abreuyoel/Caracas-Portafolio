@@ -3,7 +3,13 @@
   <a class="mobile-back-btn" routerLink="/dashboard">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
   </a>
-  <span class="mobile-topbar-title">Gráficos</span>
+  <div class="mobile-topbar-content">
+    <span class="mobile-topbar-title">Gráficos</span>
+    <select class="mobile-stock-select" [ngModel]="selectedSymbol" (ngModelChange)="loadStock($event)">
+      <option value="" disabled>Seleccionar Acción</option>
+      <option *ngFor="let s of stocks" [value]="s.symbol">{{s.symbol}}</option>
+    </select>
+  </div>
 </div>
 
 <div class="charts-shell" [class.fullscreen]="isFullscreen">
@@ -167,6 +173,7 @@
       <button class="ind-btn" [class.active]="showVolume"
               (click)="toggleVolume()" style="--c:#58a6ff">Vol</button>
       <button class="ind-btn" [class.active]="showAnalytics" (click)="toggleAnalytics()" style="--c:#ffaa66">📊 Analytics</button>
+      <button class="ind-btn" [class.active]="showVolumeProfile" (click)="toggleVolumeProfile()" style="--c:#a371f7" title="Perfil de Volumen — HVN / LVN">VP</button>
 
       <span class="msr-pill" *ngIf="measureResult">📏 {{measureResult}}</span>
       <span class="msr-pill" *ngIf="fibLevels.length">
@@ -182,7 +189,9 @@
           <div class="spin"></div><span>Cargando {{selectedSymbol}}…</span>
         </div>
 
-        <div #chartContainer class="pane main-pane"></div>
+        <div #chartContainer class="pane main-pane">
+          <canvas #vpCanvas class="vp-canvas" *ngIf="showVolumeProfile"></canvas>
+        </div>
         <div #volumeContainer class="pane vol-pane" *ngIf="showVolume">
           <span class="pane-tag">Volumen</span>
           <!-- FIX: volume value shown from crosshair -->
@@ -201,6 +210,19 @@
         </div>
         <div #aroonContainer class="pane sub-pane" *ngIf="indEnabled('aroon')">
           <span class="pane-tag">Aroon(25)</span>
+        </div>
+        <div class="patterns-panel" *ngIf="indEnabled('patterns') && detectedPatterns.length">
+          <div class="patterns-header">Patrones detectados ({{ detectedPatterns.length }})</div>
+          <div class="patterns-list">
+            <div class="pattern-row" *ngFor="let p of detectedPatterns.slice(-8).reverse()"
+                 [class.bullish]="p.bias === 'bullish'"
+                 [class.bearish]="p.bias === 'bearish'"
+                 [title]="p.description">
+              <span class="pattern-time">{{ p.time }}</span>
+              <span class="pattern-label">{{ p.label }}</span>
+              <span class="pattern-bias">{{ p.bias === 'bullish' ? '↑' : (p.bias === 'bearish' ? '↓' : '·') }}</span>
+            </div>
+          </div>
         </div>
         <div #stochContainer class="pane sub-pane" *ngIf="indEnabled('stoch')">
           <span class="pane-tag">Stoch(14,3)</span>
@@ -226,78 +248,260 @@
           <div class="msr-row">{{measurePopup.from}} → {{measurePopup.to}}</div>
         </div>
 
-        <!-- Analytics panel: OBV, A/D, Aroon, ADX, Chaikin, ATR%, DMI, Stoch, MFI -->
+        <!-- Analytics panel — Indicadores Avanzados -->
         <div class="analytics-panel"
              *ngIf="showAnalytics && selectedSymbol"
              [style.left.px]="analyticsPos.x"
              [style.top.px]="analyticsPos.y"
              (mousedown)="startDragAnalytics($event)">
-    <div class="analytics-header" style="cursor:move">
-      <span>📊 Indicadores Avanzados</span>
-      <button class="x-btn" (click)="toggleAnalytics(); $event.stopPropagation()">✕</button>
-    </div>
-    <div class="analytics-grid">
-      <div class="analytics-item">
-        <span class="analytics-label">OBV</span>
-        <span class="analytics-value" [class.val-up]="obvValue>0" [class.val-dn]="obvValue<0">{{formatLargeNumber(obvValue)}}</span>
-      </div>
-      <div class="analytics-item">
-        <span class="analytics-label">A/D Line</span>
-        <span class="analytics-value" [class.val-up]="adValue>0" [class.val-dn]="adValue<0">{{formatLargeNumber(adValue)}}</span>
-      </div>
-      <div class="analytics-item">
-        <span class="analytics-label">Aroon Up</span>
-        <span class="analytics-value" [class.val-up]="aroonUp>=70" [class.val-mid]="aroonUp>=30&&aroonUp<70" [class.val-dn]="aroonUp<30">{{aroonUp | number:'1.0-0'}}%</span>
-      </div>
-      <div class="analytics-item">
-        <span class="analytics-label">Aroon Down</span>
-        <span class="analytics-value" [class.val-up]="aroonDown<30" [class.val-mid]="aroonDown>=30&&aroonDown<70" [class.val-dn]="aroonDown>=70">{{aroonDown | number:'1.0-0'}}%</span>
-      </div>
-      <div class="analytics-item">
-        <span class="analytics-label">ADX</span>
-        <span class="analytics-value" [class.val-up]="adxValue>25" [class.val-mid]="adxValue>=15&&adxValue<=25" [class.val-dn]="adxValue<15">
-          {{adxValue | number:'1.1-1'}} <span class="analytics-badge">{{adxValue>25?'TENDENCIA':'RANGO'}}</span>
-        </span>
-      </div>
-      <div class="analytics-item">
-        <span class="analytics-label">Chaikin Osc</span>
-        <span class="analytics-value" [class.val-up]="chaikinValue>0" [class.val-dn]="chaikinValue<0">{{formatLargeNumber(chaikinValue)}}</span>
-      </div>
-      <div class="analytics-item">
-        <span class="analytics-label">ATR %</span>
-        <span class="analytics-value" [class.val-up]="atrPercent>5" [class.val-mid]="atrPercent>=2&&atrPercent<=5" [class.val-dn]="atrPercent<2">{{atrPercent | number:'1.2-2'}}%</span>
-      </div>
-      <div class="analytics-item">
-        <span class="analytics-label">DMI</span>
-        <span class="analytics-value" [class.val-up]="dmiValue>50" [class.val-dn]="dmiValue<50">{{dmiValue | number:'1.1-1'}}</span>
-      </div>
-      <div class="analytics-item">
-        <span class="analytics-label">Stoch %K</span>
-        <span class="analytics-value" [class.val-dn]="stochValue>80" [class.val-up]="stochValue<20" [class.val-mid]="stochValue>=20&&stochValue<=80">
-          {{stochValue | number:'1.1-1'}}% <span class="analytics-badge">{{stochValue>80?'SOBRECOMPRA':stochValue<20?'SOBREVENTA':''}}</span>
-        </span>
-      </div>
-      <div class="analytics-item">
-        <span class="analytics-label">MFI Smart$</span>
-        <span class="analytics-value" [class.val-dn]="mfiValue>80" [class.val-up]="mfiValue<20" [class.val-mid]="mfiValue>=20&&mfiValue<=80">
-          {{mfiValue | number:'1.1-1'}} <span class="analytics-badge">{{mfiValue>80?'DIST.':mfiValue<20?'ACUM.':''}}</span>
-        </span>
-      </div>
-    </div>
-    <div class="analytics-aroon-interp">
-      <span class="analytics-label">Aroon: </span>
-      <span class="analytics-value"
-        [class.val-up]="aroonUp>=70&&aroonDown<30"
-        [class.val-dn]="aroonDown>=70&&aroonUp<30"
-        [class.val-mid]="!(aroonUp>=70||aroonDown>=70)">
-        {{aroonUp>=70&&aroonDown<30?'▲ ALCISTA FUERTE':
-          aroonDown>=70&&aroonUp<30?'▼ BAJISTA FUERTE':
-          aroonUp>50&&aroonDown<50?'↗ ALCISTA':
-          aroonDown>50&&aroonUp<50?'↘ BAJISTA':'⟷ CONSOLIDACIÓN'}}
-      </span>
-    </div>
-  </div>
-      </div>
+
+          <div class="analytics-header">
+            <span class="ap-icon">📊</span>
+            <span>Indicadores Avanzados</span>
+            <span class="ap-subtitle">{{selectedSymbol}}</span>
+            <button class="x-btn" (click)="toggleAnalytics(); $event.stopPropagation()">✕</button>
+          </div>
+
+          <div class="analytics-body">
+
+            <!-- ── RÉGIMEN: Full-width highlight ─────────────────────────── -->
+            <div class="analytics-section">
+              <div class="analytics-grid">
+                <div class="analytics-item analytics-item--full">
+                  <span class="analytics-label">Régimen Multi-TF (HMM)</span>
+                  <span class="analytics-value"
+                    [class.val-up]="marketRegime==='alcista'"
+                    [class.val-dn]="marketRegime==='bajista'"
+                    [class.val-warn]="marketRegime==='volatil'"
+                    [class.val-mid]="marketRegime==='lateral'">
+                    {{marketRegime==='alcista'?'▲ ALCISTA':marketRegime==='bajista'?'▼ BAJISTA':marketRegime==='volatil'?'⚡ ALTA VOLATILIDAD':'⟷ LATERAL'}}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- ── VOLUMEN & FLUJO ─────────────────────────────────────────── -->
+            <div class="analytics-section">
+              <div class="analytics-section-title">Volumen y Flujo de Dinero</div>
+              <div class="analytics-grid">
+                <div class="analytics-item">
+                  <span class="analytics-label">OBV</span>
+                  <span class="analytics-value" [class.val-up]="obvValue>0" [class.val-dn]="obvValue<0">
+                    {{formatLargeNumber(obvValue)}}
+                  </span>
+                </div>
+                <div class="analytics-item">
+                  <span class="analytics-label">A/D Line</span>
+                  <span class="analytics-value" [class.val-up]="adValue>0" [class.val-dn]="adValue<0">
+                    {{formatLargeNumber(adValue)}}
+                  </span>
+                </div>
+                <div class="analytics-item">
+                  <span class="analytics-label">CVD Acumulado</span>
+                  <span class="analytics-value" [class.val-up]="cvdValue>0" [class.val-dn]="cvdValue<0">
+                    {{formatLargeNumber(cvdValue)}}
+                    <span class="analytics-badge">{{cvdTrend==='acumulacion'?'ACUM.':cvdTrend==='distribucion'?'DIST.':'NEUTRO'}}</span>
+                  </span>
+                </div>
+                <div class="analytics-item">
+                  <span class="analytics-label">CVD Delta (última vela)</span>
+                  <span class="analytics-value" [class.val-up]="cvdDeltaLast>0" [class.val-dn]="cvdDeltaLast<0">
+                    {{formatLargeNumber(cvdDeltaLast)}}
+                    <span class="analytics-badge">{{cvdDeltaLast>0?'COMPRA AGR.':cvdDeltaLast<0?'VENTA AGR.':'NEUTRO'}}</span>
+                  </span>
+                </div>
+                <div class="analytics-item">
+                  <span class="analytics-label">Chaikin Oscillator</span>
+                  <span class="analytics-value" [class.val-up]="chaikinValue>0" [class.val-dn]="chaikinValue<0">
+                    {{formatLargeNumber(chaikinValue)}}
+                  </span>
+                </div>
+                <div class="analytics-item">
+                  <span class="analytics-label">MFI (Smart Money)</span>
+                  <span class="analytics-value" [class.val-dn]="mfiValue>80" [class.val-up]="mfiValue<20" [class.val-mid]="mfiValue>=20&&mfiValue<=80">
+                    {{mfiValue | number:'1.1-1'}}
+                    <span class="analytics-badge">{{mfiValue>80?'DISTRIBUCIÓN':mfiValue<20?'ACUMULACIÓN':'NEUTRO'}}</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- ── TENDENCIA ───────────────────────────────────────────────── -->
+            <div class="analytics-section">
+              <div class="analytics-section-title">Tendencia y Dirección</div>
+              <div class="analytics-grid">
+                <div class="analytics-item">
+                  <span class="analytics-label">ADX</span>
+                  <span class="analytics-value" [class.val-up]="adxValue>25" [class.val-mid]="adxValue>=15&&adxValue<=25" [class.val-dn]="adxValue<15">
+                    {{adxValue | number:'1.1-1'}}
+                    <span class="analytics-badge">{{adxValue>25?'TENDENCIA':'RANGO'}}</span>
+                  </span>
+                </div>
+                <div class="analytics-item">
+                  <span class="analytics-label">DMI</span>
+                  <span class="analytics-value" [class.val-up]="dmiValue>50" [class.val-dn]="dmiValue<50">
+                    {{dmiValue | number:'1.1-1'}}
+                  </span>
+                </div>
+                <div class="analytics-item">
+                  <span class="analytics-label">Aroon Up</span>
+                  <span class="analytics-value" [class.val-up]="aroonUp>=70" [class.val-mid]="aroonUp>=30&&aroonUp<70" [class.val-dn]="aroonUp<30">
+                    {{aroonUp | number:'1.0-0'}}%
+                  </span>
+                </div>
+                <div class="analytics-item">
+                  <span class="analytics-label">Aroon Down</span>
+                  <span class="analytics-value" [class.val-up]="aroonDown<30" [class.val-mid]="aroonDown>=30&&aroonDown<70" [class.val-dn]="aroonDown>=70">
+                    {{aroonDown | number:'1.0-0'}}%
+                  </span>
+                </div>
+                <div class="analytics-item">
+                  <span class="analytics-label">Momentum (20d)</span>
+                  <span class="analytics-value" [class.val-up]="momentumScore>2" [class.val-dn]="momentumScore<-2" [class.val-mid]="momentumScore>=-2&&momentumScore<=2">
+                    {{momentumScore | number:'1.2-2'}}%
+                    <span class="analytics-badge">{{momentumScore>5?'FUERTE ▲':momentumScore>2?'ALCISTA':momentumScore<-5?'FUERTE ▼':momentumScore<-2?'BAJISTA':'NEUTRO'}}</span>
+                  </span>
+                </div>
+                <div class="analytics-item">
+                  <span class="analytics-label">AutoCorr (30d)</span>
+                  <span class="analytics-value" [class.val-up]="autoCorr30>0.2" [class.val-dn]="autoCorr30<-0.2" [class.val-mid]="autoCorr30>=-0.2&&autoCorr30<=0.2">
+                    {{autoCorr30 | number:'1.2-2'}}
+                    <span class="analytics-badge">{{autoCorr30>0.2?'MOMENTUM':autoCorr30<-0.2?'REVERSIÓN':'RUIDO'}}</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- ── VOLATILIDAD ─────────────────────────────────────────────── -->
+            <div class="analytics-section">
+              <div class="analytics-section-title">Volatilidad y Rango</div>
+              <div class="analytics-grid">
+                <div class="analytics-item">
+                  <span class="analytics-label">ATR %</span>
+                  <span class="analytics-value" [class.val-up]="atrPercent>5" [class.val-mid]="atrPercent>=2&&atrPercent<=5" [class.val-dn]="atrPercent<2">
+                    {{atrPercent | number:'1.2-2'}}%
+                  </span>
+                </div>
+                <div class="analytics-item">
+                  <span class="analytics-label">BBW (Bollinger Width)</span>
+                  <span class="analytics-value"
+                    [class.val-up]="bbwTrend==='contracting'"
+                    [class.val-dn]="bbwTrend==='expanding'"
+                    [class.val-mid]="bbwTrend==='neutral'">
+                    {{bbwValue | number:'1.2-2'}}%
+                    <span class="analytics-badge">{{bbwTrend==='contracting'?'▼ SQUEEZE':bbwTrend==='expanding'?'▲ EXPANSIÓN':'ESTABLE'}}</span>
+                  </span>
+                </div>
+                <div class="analytics-item">
+                  <span class="analytics-label">ADR % (20d)</span>
+                  <span class="analytics-value" [class.val-up]="adrUsed<80" [class.val-mid]="adrUsed>=80&&adrUsed<120" [class.val-dn]="adrUsed>=120">
+                    {{adrPercent | number:'1.2-2'}}%
+                    <span class="analytics-badge">{{adrUsed | number:'1.0-0'}}% consumido</span>
+                  </span>
+                </div>
+                <div class="analytics-item">
+                  <span class="analytics-label">Stoch %K</span>
+                  <span class="analytics-value" [class.val-dn]="stochValue>80" [class.val-up]="stochValue<20" [class.val-mid]="stochValue>=20&&stochValue<=80">
+                    {{stochValue | number:'1.1-1'}}%
+                    <span class="analytics-badge">{{stochValue>80?'SOBRECOMPRA':stochValue<20?'SOBREVENTA':'NEUTRO'}}</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- ── ESTRUCTURA DE MERCADO ───────────────────────────────────── -->
+            <div class="analytics-section">
+              <div class="analytics-section-title">Estructura de Mercado</div>
+              <div class="analytics-grid">
+                <div class="analytics-item">
+                  <span class="analytics-label">HVN / POC</span>
+                  <span class="analytics-value val-up">
+                    {{vpHvn | number:'1.3-4'}}
+                    <span class="analytics-badge">SOPORTE REAL</span>
+                  </span>
+                </div>
+                <div class="analytics-item">
+                  <span class="analytics-label">LVN (Vacío Vol.)</span>
+                  <span class="analytics-value val-warn">
+                    {{vpLvn | number:'1.3-4'}}
+                    <span class="analytics-badge">VACÍO VOL.</span>
+                  </span>
+                </div>
+                <div class="analytics-item">
+                  <span class="analytics-label">Percentil 252d</span>
+                  <span class="analytics-value"
+                    [class.val-dn]="pricePercentile252>=80"
+                    [class.val-up]="pricePercentile252<=20"
+                    [class.val-mid]="pricePercentile252>20&&pricePercentile252<80">
+                    {{pricePercentile252}}%
+                    <span class="analytics-badge">{{pricePercentile252>=80?'MÁXIMO HIST.':pricePercentile252<=20?'MÍNIMO HIST.':'RANGO MEDIO'}}</span>
+                  </span>
+                </div>
+                <div class="analytics-item">
+                  <span class="analytics-label">Value Zone (Z-score)</span>
+                  <span class="analytics-value"
+                    [class.val-dn]="valueZoneScore>1"
+                    [class.val-up]="valueZoneScore<-1"
+                    [class.val-mid]="valueZoneScore>=-1&&valueZoneScore<=1">
+                    {{valueZoneScore | number:'1.2-2'}}σ
+                    <span class="analytics-badge">{{valueZoneLabel}}</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- ── RIESGO & GESTIÓN ────────────────────────────────────────── -->
+            <div class="analytics-section">
+              <div class="analytics-section-title">Riesgo y Gestión</div>
+              <div class="analytics-grid">
+                <div class="analytics-item">
+                  <span class="analytics-label">Kelly ½F (60d)</span>
+                  <span class="analytics-value" [class.val-up]="kellyF>0.3" [class.val-mid]="kellyF>0&&kellyF<=0.3" [class.val-dn]="kellyF===0">
+                    {{kellyF | number:'1.1-1'}}
+                    <span class="analytics-badge">{{(kellyF*100 | number:'1.0-0')}}% capital</span>
+                  </span>
+                </div>
+                <div class="analytics-item">
+                  <span class="analytics-label">Z-Liquidez (20d)</span>
+                  <span class="analytics-value" [class.val-up]="liquidityZ>2" [class.val-dn]="liquidityZ<-1" [class.val-mid]="liquidityZ>=-1&&liquidityZ<=2">
+                    {{liquidityZ | number:'1.2-2'}}σ
+                    <span class="analytics-badge">{{liquidityZ>2.5?'⚡ PICO':liquidityZ<-1?'MERCADO SECO':'NORMAL'}}</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- ── INTERPRETACIONES ───────────────────────────────────────── -->
+            <div class="analytics-interp">
+              <div class="analytics-interp-row">
+                <span class="analytics-label">Aroon</span>
+                <span class="analytics-value"
+                  [class.val-up]="aroonUp>=70&&aroonDown<30"
+                  [class.val-dn]="aroonDown>=70&&aroonUp<30"
+                  [class.val-mid]="!(aroonUp>=70||aroonDown>=70)">
+                  {{aroonUp>=70&&aroonDown<30?'▲ ALCISTA FUERTE':
+                    aroonDown>=70&&aroonUp<30?'▼ BAJISTA FUERTE':
+                    aroonUp>50&&aroonDown<50?'↗ ALCISTA':
+                    aroonDown>50&&aroonUp<50?'↘ BAJISTA':'⟷ CONSOLIDACIÓN'}}
+                </span>
+              </div>
+              <div class="analytics-interp-row">
+                <span class="analytics-label">ADR</span>
+                <span class="analytics-value"
+                  [class.val-up]="adrUsed < 80"
+                  [class.val-mid]="adrUsed >= 80 && adrUsed < 120"
+                  [class.val-dn]="adrUsed >= 120">
+                  {{adrUsed < 80 ? '✅ Rango disponible para moverse' :
+                    adrUsed < 120 ? '⚠️ Cerca del límite de rango normal' :
+                    '🚨 Superó ' + (adrUsed | number:'1.0-0') + '% del ADR — posible reversión'}}
+                </span>
+              </div>
+            </div>
+
+          </div><!-- /analytics-body -->
+        </div>
+
+      </div><!-- /chart-wrap -->
 
       <div class="empty-state" *ngIf="!selectedSymbol&&!loading">
         <div class="es-ico">📊</div>

@@ -171,6 +171,11 @@ $glow-p: rgba(76, 98, 255, 0.22);
           height: 18px;
           color: $primary;
         }
+
+        .required-asterisk {
+          color: #ff4d6a;
+          font-weight: 700;
+        }
       }
 
       .input-wrapper {
@@ -366,6 +371,45 @@ $glow-p: rgba(76, 98, 255, 0.22);
       }
     }
 
+    .social-btns {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 100%;
+      margin-bottom: 20px;
+
+      .google-btn-wrap {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+      }
+
+      .social-btn {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 11px 20px;
+        border-radius: $radius-sm;
+        border: 1px solid $border;
+        background: rgba(255,255,255,0.04);
+        color: $text-1;
+        font-size: 0.9rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background 0.2s, border-color 0.2s;
+
+        &:hover:not(:disabled) {
+          background: rgba(255,255,255,0.08);
+          border-color: $border-h;
+        }
+
+        &:disabled { opacity: 0.5; cursor: not-allowed; }
+        &--apple { background: rgba(255,255,255,0.06); }
+      }
+    }
+
     .login-text {
       color: $text-2;
       font-size: 0.9rem;
@@ -398,6 +442,70 @@ $glow-p: rgba(76, 98, 255, 0.22);
       }
     }
   }
+}
+
+// ── Email sent state ──────────────────────────────────────────────────────────
+.email-sent-card {
+  text-align: center;
+  padding: 40px 32px !important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.email-sent-icon {
+  font-size: 3.5rem;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.email-sent-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #e0e6f0;
+  margin: 0;
+}
+
+.email-sent-msg {
+  color: #8090a8;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin: 0;
+  strong { color: #c0d0e0; }
+}
+
+.email-sent-hint {
+  color: #556070;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  margin: 0;
+  max-width: 300px;
+}
+
+.resend-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 10px 20px;
+  background: #111c30;
+  border: 1px solid #2a3a58;
+  border-radius: 10px;
+  color: #7eb8ff;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.2s;
+  &:hover:not(:disabled) { background: #1a2a44; }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+}
+
+.back-to-login {
+  font-size: 0.82rem;
+  color: #556070;
+  text-decoration: none;
+  margin-top: 4px;
+  &:hover { color: #7eb8ff; }
 }
 
 .register-footer {

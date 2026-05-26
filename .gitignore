@@ -48,3 +48,10 @@ import_bcv_rates.py
 check_*.txt
 build_err*.log
 build_err*.txt
+
+# Generated/scratch data — too large for git
+backend/bvc_sync_data.sql
+backend/scratch/bvc_historical_data.json
+logs.txt
+logs2.txt
+logs*.txt

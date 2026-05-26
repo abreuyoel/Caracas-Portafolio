@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { ProfileComponent } from './profile/profile.component';
 import { LibrosComponent } from './libros/libros.component';
+import { ReleaseNotesComponent } from './release-notes/release-notes.component';
 
 
 export const routes: Routes = [
@@ -16,6 +17,13 @@ export const routes: Routes = [
   { path: 'ai-chat', loadComponent: () => import('./ai-chat/ai-chat.component').then(m => m.AiChatComponent) },
   { path: 'graficos', loadComponent: () => import('./graficos/graficos.component').then(m => m.GraficosComponent) },
   { path: 'profile', component: ProfileComponent },
-  { path: 'social', loadComponent: () => import('./social/social-profile.component').then(m => m.SocialProfileComponent) },
+  { path: 'social', redirectTo: '/community', pathMatch: 'full' },
+  { path: 'aprende', loadComponent: () => import('./aprende/aprende.component').then(m => m.AprendeComponent) },
+  { path: 'paper-trading', loadComponent: () => import('./paper-trading/paper-trading.component').then(m => m.PaperTradingComponent) },
+  { path: 'montecarlo', loadComponent: () => import('./montecarlo/montecarlo.component').then(m => m.MontecarloComponent) },
+  { path: 'analisis', loadComponent: () => import('./analisis/analisis.component').then(m => m.AnalisisComponent) },
+  { path: 'indices-bvc', loadComponent: () => import('./indices-bvc/indices-bvc.component').then(m => m.IndicesBvcComponent) },
+  { path: 'community', loadComponent: () => import('./community/community.component').then(m => m.CommunityComponent) },
+  { path: 'release-notes', component: ReleaseNotesComponent },
   { path: '**', redirectTo: '/auth/login' }
 ];

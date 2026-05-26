@@ -4,6 +4,29 @@
     <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
   </a>
   <span class="mobile-topbar-title">Portafolio</span>
+  <span class="mobile-topbar-spacer"></span>
+
+  <!-- Notification bell -->
+  <button class="notif-btn-mini" [matMenuTriggerFor]="notifMenuPf"
+    [matTooltip]="(pushSvc.granted$ | async) ? 'Notificaciones activas' : 'Activar notificaciones push'">
+    <mat-icon [class.notif-active]="pushSvc.granted$ | async">
+      {{ (pushSvc.granted$ | async) ? 'notifications_active' : 'notifications_none' }}
+    </mat-icon>
+  </button>
+  <mat-menu #notifMenuPf="matMenu" class="notif-menu-panel">
+    @if (!(pushSvc.granted$ | async)) {
+      <button mat-menu-item (click)="togglePush()">
+        <mat-icon>notifications</mat-icon><span>Activar notificaciones push</span>
+      </button>
+    } @else {
+      <button mat-menu-item (click)="testPush()">
+        <mat-icon>send</mat-icon><span>Enviar notificación de prueba</span>
+      </button>
+      <button mat-menu-item (click)="togglePush()">
+        <mat-icon>notifications_off</mat-icon><span>Desactivar push</span>
+      </button>
+    }
+  </mat-menu>
 </div>
 
 <div class="pf-container">
@@ -27,6 +50,12 @@
         <h1>Análisis de Portafolio</h1>
       </div>
       <span class="spacer"></span>
+      <button class="toolbar-shortcut-btn" (click)="scrollToTools('dividends')" matTooltip="Ir a Dividendos">
+        <mat-icon>payments</mat-icon><span>Dividendos</span>
+      </button>
+      <button class="toolbar-shortcut-btn" (click)="scrollToTools('rebalance')" matTooltip="Ir a Rebalanceo">
+        <mat-icon>balance</mat-icon><span>Rebalanceo</span>
+      </button>
       <div class="toolbar-badge">
         <button mat-icon-button class="hide-values-btn" (click)="toggleHideValues()" [matTooltip]="hideValues ? 'Mostrar valores' : 'Ocultar valores'">
           <mat-icon>{{ hideValues ? 'visibility_off' : 'visibility' }}</mat-icon>
@@ -98,6 +127,25 @@
           <span class="kpi-sub">{{ data.summary.total_buys }} compras · {{ data.summary.total_sells }} ventas</span>
         </div>
       </div>
+
+      @if (data.summary.total_net_if_sold_usd !== undefined) {
+      <div class="kpi-card kpi-card--net"
+        [class.kpi-up]="data.summary.total_net_if_sold_usd >= 0"
+        [class.kpi-dn]="data.summary.total_net_if_sold_usd < 0">
+        <div class="kpi-icon">🏦</div>
+        <div class="kpi-body">
+          <span class="kpi-label">Si vendieras todo hoy</span>
+          <span class="kpi-value"
+            [class.txt-up]="data.summary.total_net_if_sold_usd >= 0"
+            [class.txt-dn]="data.summary.total_net_if_sold_usd < 0">
+            {{ data.summary.total_net_if_sold_usd >= 0 ? '+' : '' }}${{ data.summary.total_net_if_sold_usd | number:'1.2-2' }}
+          </span>
+          <span class="kpi-sub" matTooltip="Ganancia latente neta después de comisiones + IVA + dcho.registro de venta estimados ({{ data.summary.avg_commission_rate_pct | number:'1.2-2' }}%)">
+            −${{ data.summary.total_estimated_sell_cost_usd | number:'1.2-2' }} en comisiones de venta
+          </span>
+        </div>
+      </div>
+      }
     </section>
 
     <!-- ── Spotlight row (best/worst positions) ───────────────────────────── -->
@@ -168,6 +216,57 @@
           </div>
         </div>
       }
+    </section>
+
+    <!-- ── P&L History (area chart) ─────────────────────────────────────── -->
+    <section class="chart-card chart-card--pnl-history">
+
+      <!-- Header -->
+      <div class="chart-header">
+        <div>
+          <h3>P&L Histórico del Portafolio</h3>
+          <p class="chart-sub">Ganancia/pérdida diaria en USD desde tu primera operación</p>
+        </div>
+
+        <!-- Quick stats -->
+        @if (bestPnlDay) {
+          <div class="pnl-hist-stat pnl-hist-stat--up">
+            <span class="phs-label">Mejor día</span>
+            <span class="phs-val">+${{ bestPnlDay.pnl_usd | number:'1.2-2' }}</span>
+            <span class="phs-date">{{ bestPnlDay.date | date:'mediumDate' }}</span>
+          </div>
+        }
+        @if (worstPnlDay) {
+          <div class="pnl-hist-stat pnl-hist-stat--dn">
+            <span class="phs-label">Peor día</span>
+            <span class="phs-val">${{ worstPnlDay.pnl_usd | number:'1.2-2' }}</span>
+            <span class="phs-date">{{ worstPnlDay.date | date:'mediumDate' }}</span>
+          </div>
+        }
+      </div>
+
+      <!-- Stock selector pills -->
+      <div class="pnl-stock-pills">
+        <button class="pnl-pill" [class.active]="selectedPnlStock === null"
+                (click)="selectPnlStock(null)">Consolidado</button>
+        @for (sym of pnlHistorySymbols; track sym) {
+          <button class="pnl-pill" [class.active]="selectedPnlStock === sym"
+                  (click)="selectPnlStock(sym)">{{ sym }}</button>
+        }
+      </div>
+
+      <!-- Chart -->
+      <div class="canvas-wrap canvas-wrap--pnl-hist">
+        @if (pnlHistoryLoading) {
+          <div class="pnl-hist-loading">
+            <mat-spinner diameter="36" strokeWidth="3"></mat-spinner>
+          </div>
+        } @else if (currentPnlPoints.length === 0) {
+          <div class="pnl-hist-empty">Sin datos históricos de precios disponibles aún</div>
+        } @else {
+          <canvas #pnlHistoryChart></canvas>
+        }
+      </div>
     </section>
 
     <!-- ── Charts row 1: Timeline + Allocation ───────────────────────────── -->
@@ -273,25 +372,33 @@
               <th class="center">Ventas</th>
               <th class="center">Qty Actual</th>
               <th class="right">Invertido $</th>
+              <th class="right">Precio USD</th>
               <th class="right">Valor Actual $</th>
               <th class="right">Realizado $</th>
               <th class="right">Latente $</th>
               <th class="right">P&L Total $</th>
               <th class="center">ROI</th>
+              <th class="right" matTooltip="Ganancia latente neta si vendieras hoy, restando comisiones + IVA + dcho.registro de venta estimados">Neto si vendes $</th>
             </tr>
           </thead>
           <tbody>
             @for (s of data.performance_by_stock; track s.symbol) {
-              <tr>
+              <tr [class.pf-live-pulse]="isLive(s.symbol)">
                 <td>
                   <div class="sym-cell">
                     <span class="sym-box">{{ s.symbol }}</span>
+                    @if (isLive(s.symbol)) {
+                      <span class="live-dot">● LIVE</span>
+                    }
                   </div>
                 </td>
                 <td class="center muted">{{ s.buy_count }}</td>
                 <td class="center muted">{{ s.sell_count }}</td>
                 <td class="center mono">{{ s.quantity | number }}</td>
                 <td class="right mono">${{ s.total_invested | number:'1.2-2' }}</td>
+                <td class="right mono">
+                  {{ s.unit_price_usd > 0 ? ('$' + (s.unit_price_usd | number:'1.4-4')) : '—' }}
+                </td>
                 <td class="right mono" [class.txt-up]="s.current_value > s.total_invested" [class.txt-dn]="s.current_value < s.total_invested && s.current_value > 0">
                   {{ s.current_value > 0 ? ('$' + (s.current_value | number:'1.2-2')) : '—' }}
                 </td>
@@ -308,6 +415,19 @@
                   <span class="roi-chip" [class.roi-up]="s.gain_pct >= 0" [class.roi-dn]="s.gain_pct < 0">
                     {{ s.gain_pct >= 0 ? '▲' : '▼' }} {{ Math.abs(s.gain_pct) | number:'1.1-1' }}%
                   </span>
+                </td>
+                <td class="right mono">
+                  @if (s.quantity > 0) {
+                    <div class="net-cell"
+                      [class.txt-up]="s.net_if_sold_usd >= 0"
+                      [class.txt-dn]="s.net_if_sold_usd < 0"
+                      [matTooltip]="'−$' + (s.estimated_sell_cost_usd | number:'1.2-2') + ' en comisiones (' + (data.summary.avg_commission_rate_pct | number:'1.2-2') + '%)'">
+                      <span class="net-val">{{ s.net_if_sold_usd >= 0 ? '+' : '' }}${{ s.net_if_sold_usd | number:'1.2-2' }}</span>
+                      <span class="net-pct">{{ s.net_if_sold_pct >= 0 ? '+' : '' }}{{ s.net_if_sold_pct | number:'1.1-1' }}%</span>
+                    </div>
+                  } @else {
+                    <span class="muted">—</span>
+                  }
                 </td>
               </tr>
             }
@@ -390,6 +510,277 @@
         }
       </div>
     </section>
+
+    <!-- ── Herramientas de Portafolio (Rebalanceo + Dividendos) ──────────── -->
+    <section class="pf-tools-section" #toolsSection>
+      <div class="pf-tools-header">
+        <h2>Herramientas de Portafolio</h2>
+        <p class="section-sub">Optimiza la distribución de tu capital y registra tus dividendos recibidos</p>
+      </div>
+      <div class="pf-tools-tabs">
+        <button class="pf-tab-btn" [class.pf-tab-btn--active]="pfToolTab === 'rebalance'" (click)="pfToolTab = 'rebalance'">
+          <mat-icon>balance</mat-icon><span>Rebalanceo</span>
+        </button>
+        <button class="pf-tab-btn" [class.pf-tab-btn--active]="pfToolTab === 'dividends'" (click)="pfToolTab = 'dividends'; loadDividends()">
+          <mat-icon>payments</mat-icon><span>Dividendos</span>
+        </button>
+      </div>
+
+      <!-- REBALANCEO -->
+      @if (pfToolTab === 'rebalance') {
+        <div class="pf-tool-body">
+          <div class="tool-intro">
+            <div class="tool-intro__icon">⚖️</div>
+            <div>
+              <h3>Rebalanceo Sugerido</h3>
+              <p>Define cuánto porcentaje (%) quieres asignar a cada acción y el sistema te dirá exactamente cuántas acciones comprar o vender para alcanzar esa distribución basada en tu portafolio actual.</p>
+            </div>
+          </div>
+
+          @if (!rebalStocks.length) {
+            <div class="pf-tool-init">
+              <button class="run-btn" (click)="initRebal()">
+                <mat-icon>play_circle</mat-icon><span>Cargar posiciones</span>
+              </button>
+            </div>
+          }
+
+          @if (rebalStocks.length) {
+            <div class="rebal-controls">
+              <div class="rebal-total" [class.rebal-total--ok]="rebalTotalPct >= 95 && rebalTotalPct <= 105" [class.rebal-total--warn]="rebalTotalPct > 0 && (rebalTotalPct < 95 || rebalTotalPct > 105)">
+                <mat-icon>{{ (rebalTotalPct >= 95 && rebalTotalPct <= 105) ? 'check_circle' : 'info' }}</mat-icon>
+                <span>Total asignado: <strong>{{ rebalTotalPct | number:'1.1-1' }}%</strong> (debe sumar ~100%)</span>
+              </div>
+              <div class="rebal-btn-row">
+                <button class="run-btn run-btn--outline" (click)="distributeEqually()">
+                  <mat-icon>auto_fix_high</mat-icon><span>Distribuir igual</span>
+                </button>
+                <button class="run-btn run-btn--ghost" (click)="clearRebalTargets()">
+                  <mat-icon>clear</mat-icon><span>Limpiar</span>
+                </button>
+                <button class="run-btn" (click)="runRebalance()" [disabled]="rebalLoading || rebalTotalPct === 0">
+                  @if (rebalLoading) { <mat-spinner diameter="18" strokeWidth="3"></mat-spinner> }
+                  @else { <mat-icon>balance</mat-icon> }
+                  <span>{{ rebalLoading ? 'Calculando…' : 'Calcular rebalanceo' }}</span>
+                </button>
+              </div>
+            </div>
+
+            @if (rebalError) { <div class="tool-error"><mat-icon>error_outline</mat-icon><span>{{ rebalError }}</span></div> }
+
+            <div class="rebal-inputs-grid">
+              @for (t of rebalTargets; track t.symbol) {
+                <div class="rebal-input-card" [class.rebal-input-card--active]="t.target > 0">
+                  <div class="rebal-sym">{{ t.symbol }}</div>
+                  <div class="rebal-input-wrap">
+                    <input type="number" [(ngModel)]="t.target" (ngModelChange)="updateRebalTotal()" min="0" max="100" step="1" class="rebal-pct-input" placeholder="0" />
+                    <span class="rebal-pct-sign">%</span>
+                  </div>
+                  <div class="rebal-mini-bar">
+                    <div class="rebal-mini-fill" [style.width.%]="Math.min(t.target, 100)"></div>
+                  </div>
+                </div>
+              }
+            </div>
+
+            @if (rebalResult) {
+              <div class="rebal-summary-card">
+                <mat-icon>account_balance_wallet</mat-icon>
+                <div>
+                  <span class="rebal-sum-label">Valor total del portafolio</span>
+                  <span class="rebal-sum-val">${{ rebalResult.total_portfolio_usd | number:'1.2-2' }}</span>
+                  <span class="rebal-sum-sub">Tasa BCV: {{ rebalResult.bcv_rate | number:'1.2-2' }} Bs/$</span>
+                </div>
+              </div>
+              <div class="liq-table-wrap">
+                <table class="liq-table">
+                  <thead>
+                    <tr>
+                      <th>Acción</th>
+                      <th class="right">Asign. Actual</th>
+                      <th class="right">Objetivo</th>
+                      <th class="right">Val. Actual USD</th>
+                      <th class="right">Val. Objetivo USD</th>
+                      <th class="right">Diferencia</th>
+                      <th class="right">Acciones Δ</th>
+                      <th class="center">Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (s of rebalResult.suggestions; track s.symbol) {
+                      <tr>
+                        <td><strong>{{ s.symbol }}</strong><span class="sym-name">{{ s.name }}</span></td>
+                        <td class="right mono">{{ s.current_alloc_pct | number:'1.1-1' }}%</td>
+                        <td class="right mono">{{ s.target_alloc_pct | number:'1.1-1' }}%</td>
+                        <td class="right mono">${{ s.current_value_usd | number:'1.2-2' }}</td>
+                        <td class="right mono">${{ s.target_value_usd | number:'1.2-2' }}</td>
+                        <td class="right mono" [class.txt-up]="s.diff_usd > 0" [class.txt-dn]="s.diff_usd < 0">
+                          {{ s.diff_usd >= 0 ? '+' : '' }}${{ s.diff_usd | number:'1.2-2' }}
+                        </td>
+                        <td class="right mono" [class.txt-up]="s.shares_delta > 0" [class.txt-dn]="s.shares_delta < 0">
+                          {{ s.shares_delta > 0 ? '+' : '' }}{{ s.shares_delta }}
+                        </td>
+                        <td class="center">
+                          <span class="rebal-action-badge" [class]="'action-' + s.action">
+                            <mat-icon>{{ rebalActionIcon(s.action) }}</mat-icon>
+                            {{ s.action | titlecase }}
+                          </span>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+              <div class="bt-note"><mat-icon>info</mat-icon><span>{{ rebalResult.note }}</span></div>
+            }
+          }
+        </div>
+      }
+
+      <!-- DIVIDENDOS -->
+      @if (pfToolTab === 'dividends') {
+        <div class="pf-tool-body">
+          <div class="tool-intro">
+            <div class="tool-intro__icon">💰</div>
+            <div>
+              <h3>Registro de Dividendos</h3>
+              <p>Registra los dividendos que recibes de tus acciones BVC. Se incluyen en el cálculo de tu retorno total real. Cada pago queda guardado con su equivalente en USD a la tasa BCV del momento.</p>
+            </div>
+          </div>
+
+          <div class="div-header-row">
+            <button class="run-btn" (click)="showDivForm = !showDivForm">
+              <mat-icon>{{ showDivForm ? 'close' : 'add' }}</mat-icon>
+              <span>{{ showDivForm ? 'Cancelar' : 'Registrar dividendo' }}</span>
+            </button>
+            <button class="run-btn run-btn--outline" (click)="loadDividends()" [disabled]="divLoading">
+              @if (divLoading) { <mat-spinner diameter="16" strokeWidth="3"></mat-spinner> }
+              @else { <mat-icon>refresh</mat-icon> }
+            </button>
+          </div>
+
+          @if (showDivForm) {
+            <div class="div-form-card">
+              <h3 class="div-form-title">Nuevo dividendo</h3>
+              <div class="div-form-grid">
+                <div class="ctrl-field">
+                  <label>Acción *</label>
+                  <select [(ngModel)]="divForm.stock_symbol" class="ctrl-select">
+                    <option value="">Seleccionar símbolo…</option>
+                    @for (s of divStocks; track s.symbol) {
+                      <option [value]="s.symbol">{{ s.symbol }} — {{ s.name }}</option>
+                    }
+                  </select>
+                </div>
+                <div class="ctrl-field ctrl-field--sm">
+                  <label>Acciones poseídas *</label>
+                  <input type="number" [(ngModel)]="divForm.shares_held" min="1" class="ctrl-input" placeholder="Ej: 500" />
+                </div>
+                <div class="ctrl-field ctrl-field--sm">
+                  <label>Dividendo / acción (Bs) *</label>
+                  <input type="number" [(ngModel)]="divForm.dividend_per_share_bs" min="0.0001" step="0.0001" class="ctrl-input" placeholder="Ej: 0.05" />
+                </div>
+                <div class="ctrl-field ctrl-field--sm">
+                  <label>Fecha de pago *</label>
+                  <input type="date" [(ngModel)]="divForm.payment_date" class="ctrl-input" />
+                </div>
+                <div class="ctrl-field ctrl-field--sm">
+                  <label>Fecha ex-dividendo</label>
+                  <input type="date" [(ngModel)]="divForm.ex_date" class="ctrl-input" />
+                </div>
+                <div class="ctrl-field">
+                  <label>Total estimado (Bs)</label>
+                  <div class="ctrl-input ctrl-input--readonly">
+                    {{ divForm.shares_held && divForm.dividend_per_share_bs ? (divForm.shares_held * divForm.dividend_per_share_bs | number:'1.2-2') + ' Bs' : '—' }}
+                  </div>
+                </div>
+              </div>
+              <div class="ctrl-field" style="margin-top: 8px;">
+                <label>Notas</label>
+                <input type="text" [(ngModel)]="divForm.notes" class="ctrl-input" placeholder="Opcional…" />
+              </div>
+              @if (divSaveError) { <div class="tool-error" style="margin-top: 12px;"><mat-icon>error_outline</mat-icon><span>{{ divSaveError }}</span></div> }
+              <div style="margin-top: 16px; display: flex; gap: 10px;">
+                <button class="run-btn" (click)="saveDividend()" [disabled]="divSaving">
+                  @if (divSaving) { <mat-spinner diameter="16" strokeWidth="3"></mat-spinner> }
+                  @else { <mat-icon>save</mat-icon> }
+                  <span>{{ divSaving ? 'Guardando…' : 'Guardar dividendo' }}</span>
+                </button>
+              </div>
+            </div>
+          }
+
+          @if (divLoading) { <div class="tool-loading"><mat-spinner diameter="32" strokeWidth="3"></mat-spinner><span>Cargando dividendos…</span></div> }
+          @if (divError) { <div class="tool-error"><mat-icon>error_outline</mat-icon><span>{{ divError }}</span></div> }
+
+          @if (divResult) {
+            <div class="div-summary-row">
+              <div class="div-sum-card">
+                <span class="div-sum-label">Pagos registrados</span>
+                <span class="div-sum-val">{{ divResult.summary.count }}</span>
+              </div>
+              <div class="div-sum-card div-sum-card--bs">
+                <span class="div-sum-label">Total recibido (Bs)</span>
+                <span class="div-sum-val txt-up">Bs {{ divResult.summary.total_bs | number:'1.2-2' }}</span>
+              </div>
+              <div class="div-sum-card div-sum-card--usd">
+                <span class="div-sum-label">Total recibido (USD)</span>
+                <span class="div-sum-val txt-up">${{ divResult.summary.total_usd | number:'1.4-4' }}</span>
+              </div>
+              <div class="div-sum-card">
+                <span class="div-sum-label">BCV referencial</span>
+                <span class="div-sum-val">{{ divResult.summary.current_bcv | number:'1.2-2' }} Bs/$</span>
+              </div>
+            </div>
+
+            @if (divResult.dividends.length === 0) {
+              <div class="empty-state">
+                <mat-icon>payments</mat-icon>
+                <p>Aún no has registrado ningún dividendo. Cuando recibas uno, regístralo con el botón de arriba.</p>
+              </div>
+            } @else {
+              <div class="liq-table-wrap">
+                <table class="liq-table">
+                  <thead>
+                    <tr>
+                      <th>Acción</th>
+                      <th class="right">Acciones</th>
+                      <th class="right">Div/Acción (Bs)</th>
+                      <th class="right">Total Bs</th>
+                      <th class="right">Total USD</th>
+                      <th class="right">Tasa BCV</th>
+                      <th>Fecha pago</th>
+                      <th>Ex-date</th>
+                      <th class="center">Eliminar</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (d of divResult.dividends; track d.id) {
+                      <tr>
+                        <td><strong>{{ d.stock_symbol }}</strong><span class="sym-name">{{ d.stock_name }}</span></td>
+                        <td class="right mono">{{ d.shares_held | number:'1.0-0' }}</td>
+                        <td class="right mono">Bs {{ d.dividend_per_share_bs | number:'1.4-4' }}</td>
+                        <td class="right mono txt-up">Bs {{ d.total_bs | number:'1.2-2' }}</td>
+                        <td class="right mono txt-up">${{ d.total_usd | number:'1.4-4' }}</td>
+                        <td class="right mono">{{ d.bcv_rate | number:'1.2-2' }}</td>
+                        <td class="mono">{{ d.payment_date | date:'dd/MM/yyyy' }}</td>
+                        <td class="mono">{{ d.ex_date ? (d.ex_date | date:'dd/MM/yyyy') : '—' }}</td>
+                        <td class="center">
+                          <button class="del-btn" (click)="deleteDividend(d.id)">
+                            <mat-icon>delete_outline</mat-icon>
+                          </button>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          }
+        </div>
+      }
+    </section>
+
   }
 
   @if (!loading && !data) {
@@ -419,12 +810,12 @@
     <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M3.5 18.5l6-6 4 4L22 6.92 20.59 5.5l-7.09 8-4-4L2 17z"/></svg>
     <span>Gráficos</span>
   </a>
-  <a class="mbn-item" routerLink="/transactions" routerLinkActive="active">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M6.99 11L3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z"/></svg>
-    <span>Transacciones</span>
+  <a class="mbn-item" routerLink="/goals" routerLinkActive="active">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+    <span>Objetivos</span>
   </a>
-  <a class="mbn-item" routerLink="/profile" routerLinkActive="active">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
-    <span>Perfil</span>
+  <a class="mbn-item" routerLink="/analisis" routerLinkActive="active">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+    <span>Análisis</span>
   </a>
 </nav>

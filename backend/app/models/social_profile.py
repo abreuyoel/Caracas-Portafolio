@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, UniqueConstraint, Text
+from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, UniqueConstraint, Text, Integer, Float
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from app.database import Base
@@ -41,6 +41,14 @@ class SocialProfile(Base):
     # Consentimiento Legal
     accepted_terms         = Column(Boolean, default=False)
     terms_accepted_at      = Column(DateTime(timezone=True), nullable=True)
+
+    # Reputación y Leaderboard
+    reputation_points      = Column(Integer, default=0)
+    level                  = Column(String(20), default="novato")     # novato | trader | experto | elite | leyenda
+    show_in_leaderboard    = Column(Boolean, default=True)
+    prediction_score       = Column(Float, default=0.0)               # % acierto en encuestas
+    predictions_total      = Column(Integer, default=0)
+    predictions_correct    = Column(Integer, default=0)
 
     created_at  = Column(DateTime(timezone=True), server_default=func.now())
     updated_at  = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

@@ -1,0 +1,649 @@
+<!-- ── Mobile topbar ──────────────────────────────────────────────────── -->
+<div class="mobile-topbar">
+  <a class="mobile-back-btn" routerLink="/dashboard">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+  </a>
+  <span class="mobile-topbar-title">Comunidad</span>
+  <span class="mobile-topbar-badge" *ngIf="profile">@{{ profile.alias }}</span>
+</div>
+
+<div class="cm-container">
+
+  <!-- ══ Hero header ══════════════════════════════════════════════════ -->
+  <div class="cm-hero">
+    <div class="cm-hero-text">
+      <p class="cm-hero-eyebrow">Bolsa de Valores de Caracas</p>
+      <h1 class="cm-hero-title">Comunidad <span class="gradient-text">Caracas Portafolio</span></h1>
+      <p class="cm-hero-sub" *ngIf="profile">Bienvenido, <strong>@{{ profile.alias }}</strong> · {{ levelIcon(profile.level || 'novato') }} {{ profile.level || 'novato' }} · {{ profile.reputation_points || 0 }} pts</p>
+    </div>
+    <button class="cm-config-btn" (click)="selectTab('config')" [class.active]="activeTab === 'config'" matTooltip="Configurar perfil">
+      <mat-icon>settings</mat-icon>
+    </button>
+  </div>
+
+  <!-- ══ Tabs ════════════════════════════════════════════════════════ -->
+  <div class="cm-tabs">
+    <button [class.active]="activeTab==='feed'" (click)="selectTab('feed')">
+      <mat-icon>dynamic_feed</mat-icon><span>Feed</span>
+    </button>
+    <button [class.active]="activeTab==='polls'" (click)="selectTab('polls')">
+      <mat-icon>poll</mat-icon><span>Encuestas</span>
+    </button>
+    <button [class.active]="activeTab==='ranking'" (click)="selectTab('ranking')">
+      <mat-icon>leaderboard</mat-icon><span>Ranking</span>
+    </button>
+    <button [class.active]="activeTab==='mood'" (click)="selectTab('mood')">
+      <mat-icon>mood</mat-icon><span>Sentimiento</span>
+    </button>
+    <button [class.active]="activeTab==='network'" (click)="selectTab('network')">
+      <mat-icon>local_fire_department</mat-icon><span>Red</span>
+    </button>
+    <button [class.active]="activeTab==='tournaments'" (click)="selectTab('tournaments')">
+      <mat-icon>emoji_events</mat-icon><span>Torneos</span>
+    </button>
+    <button [class.active]="activeTab==='config'" (click)="selectTab('config')">
+      <mat-icon>tune</mat-icon><span>Perfil</span>
+    </button>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       FEED TAB
+       ════════════════════════════════════════════════════════════════════ -->
+  @if (activeTab === 'feed') {
+    <!-- Composer -->
+    <div class="new-post-card glass-card">
+      <div class="composer-avatar">{{ profile ? avatarLetter(profile.alias) : '?' }}</div>
+      <div class="composer-body">
+        <textarea [(ngModel)]="newPostContent" placeholder="¿Qué opinas del mercado hoy?" rows="2" maxlength="1000"></textarea>
+        <div class="composer-actions">
+          <label class="anon-toggle">
+            <input type="checkbox" [(ngModel)]="newPostAnonymous">
+            <span>🕶️ Anónimo</span>
+          </label>
+          <span class="char-count">{{ newPostContent.length }}/1000</span>
+          <button class="post-btn" (click)="submitPost()" [disabled]="posting || !newPostContent.trim()">
+            @if (posting) { <mat-icon class="spin">sync</mat-icon> } @else { <mat-icon>send</mat-icon> }
+            Publicar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    @if (feedLoading) {
+      <div class="loading-state"><mat-spinner diameter="32"></mat-spinner><p>Cargando feed...</p></div>
+    } @else if (posts.length === 0) {
+      <div class="empty-state glass-card">
+        <div class="empty-icon">💬</div>
+        <h3>El feed está vacío</h3>
+        <p>Sé el primero en publicar o sigue a otros inversores</p>
+      </div>
+    } @else {
+      <div class="feed-list">
+        @for (post of posts; track post.id) {
+          <div class="post-card glass-card">
+            <div class="post-header">
+              <div class="post-avatar">{{ post.alias[0]?.toUpperCase() || '?' }}</div>
+              <div class="post-meta">
+                <span class="post-alias">{{ post.is_anonymous ? '🕶️ Anónimo' : '@' + post.alias }}</span>
+                <span class="post-time">{{ timeAgo(post.created_at) }}</span>
+              </div>
+              @if (post.is_mine) {
+                <button class="icon-btn" [matMenuTriggerFor]="postMenu"><mat-icon>more_vert</mat-icon></button>
+                <mat-menu #postMenu="matMenu">
+                  <button mat-menu-item (click)="deletePost(post.id)"><mat-icon>delete</mat-icon><span>Eliminar</span></button>
+                </mat-menu>
+              }
+            </div>
+            <div class="post-body">{{ post.content }}</div>
+            @if (post.image_url) { <img class="post-image" [src]="post.image_url" alt="Post"> }
+
+            @if (post.poll) {
+              <div class="poll-embed">
+                <div class="poll-embed-title">📊 {{ post.poll.title }}</div>
+                <div class="poll-embed-meta">{{ post.poll.total_votes }} votos</div>
+              </div>
+            }
+
+            <div class="post-actions">
+              <button class="action-btn" [class.active]="post.my_reactions.includes('fire')" (click)="react(post.id, 'fire')">
+                🔥 <span>{{ post.fire_count || '' }}</span>
+              </button>
+              <button class="action-btn" [class.active]="post.my_reactions.includes('save')" (click)="react(post.id, 'save')">
+                🔖 <span>{{ post.save_count || '' }}</span>
+              </button>
+              <button class="action-btn" (click)="toggleComments(post.id)">
+                💬 <span>{{ post.comment_count || '' }}</span>
+              </button>
+            </div>
+
+            @if (showComments[post.id]) {
+              <div class="comments-section">
+                @if (comments[post.id]) {
+                  @for (c of comments[post.id]; track c.id) {
+                    <div class="comment-item">
+                      <span class="comment-alias">@{{ c.alias }}</span>
+                      <span class="comment-text">{{ c.content }}</span>
+                      <span class="comment-time">{{ timeAgo(c.created_at) }}</span>
+                    </div>
+                  }
+                }
+                <div class="comment-input-row">
+                  <input [(ngModel)]="commentInput[post.id]" placeholder="Comenta..." (keydown.enter)="submitComment(post.id)">
+                  <button (click)="submitComment(post.id)"><mat-icon>send</mat-icon></button>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
+  }
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       POLLS TAB
+       ════════════════════════════════════════════════════════════════════ -->
+  @if (activeTab === 'polls') {
+    <div class="section-header">
+      <div><h2>📊 Encuestas de Mercado</h2><p class="section-sub">Predice el movimiento de las acciones BVC</p></div>
+      <button class="create-btn" (click)="showCreatePoll = !showCreatePoll">
+        <mat-icon>{{ showCreatePoll ? 'close' : 'add' }}</mat-icon>
+        {{ showCreatePoll ? 'Cancelar' : 'Nueva encuesta' }}
+      </button>
+    </div>
+
+    @if (showCreatePoll) {
+      <div class="create-poll-card glass-card">
+        <input class="poll-title-input" [(ngModel)]="newPoll.title" placeholder="¿Tu pregunta sobre el mercado?" maxlength="300">
+        <div class="poll-form-row">
+          <select [(ngModel)]="newPoll.poll_type">
+            <option value="free">📋 Libre</option>
+            <option value="price_direction">📈 Sube/Baja</option>
+            <option value="price_range">📊 Rango de precio</option>
+            <option value="dividend">💰 Dividendos</option>
+            <option value="sentiment">🐂 Sentimiento</option>
+          </select>
+          <input [(ngModel)]="newPoll.symbol" placeholder="Símbolo (ej: BDVZ)" class="poll-symbol-input">
+          <select [(ngModel)]="newPoll.closes_in_hours">
+            <option [value]="24">24h</option><option [value]="48">48h</option>
+            <option [value]="72">3 días</option><option [value]="168">1 semana</option>
+            <option [value]="720">1 mes</option>
+          </select>
+        </div>
+        <div class="poll-options-list">
+          @for (opt of newPoll.options; track $index; let i = $index) {
+            <div class="poll-option-input">
+              <input [(ngModel)]="newPoll.options[i]" [placeholder]="'Opción ' + (i+1)">
+              @if (newPoll.options.length > 2) { <button class="remove-opt" (click)="removePollOption(i)">✕</button> }
+            </div>
+          }
+          @if (newPoll.options.length < 6) { <button class="add-opt-btn" (click)="addPollOption()">+ Agregar opción</button> }
+        </div>
+        <button class="submit-poll-btn" (click)="createPoll()" [disabled]="creatingPoll">
+          @if (creatingPoll) { <mat-icon class="spin">sync</mat-icon> } @else { <mat-icon>poll</mat-icon> }
+          Publicar encuesta
+        </button>
+      </div>
+    }
+
+    @if (pollsLoading) {
+      <div class="loading-state"><mat-spinner diameter="32"></mat-spinner></div>
+    } @else if (polls.length === 0) {
+      <div class="empty-state glass-card"><div class="empty-icon">📊</div><h3>No hay encuestas</h3><p>Crea la primera y que la comunidad opine</p></div>
+    } @else {
+      <div class="polls-list">
+        @for (poll of polls; track poll.id) {
+          <div class="poll-card glass-card">
+            <div class="poll-card-header">
+              <span class="poll-type-badge">{{ poll.poll_type === 'free' ? '📋' : poll.poll_type === 'price_direction' ? '📈' : poll.poll_type === 'dividend' ? '💰' : '📊' }}</span>
+              <div class="poll-card-title">{{ poll.title }}</div>
+              @if (poll.symbol) {
+                <span class="poll-symbol">{{ poll.symbol }}</span>
+                @if (livePrice(poll.symbol)) {
+                  <span class="live-price-badge">Bs {{ livePrice(poll.symbol) | number:'1.2-4' }}</span>
+                }
+              }
+            </div>
+            <div class="poll-options-grid">
+              @for (opt of poll.options; track $index; let i = $index) {
+                <button class="poll-vote-btn"
+                  [class.voted]="poll.my_vote === i"
+                  [class.disabled]="poll.my_vote !== null && poll.my_vote !== undefined"
+                  (click)="poll.my_vote === null || poll.my_vote === undefined ? votePoll(poll.id, i) : null">
+                  <span class="poll-opt-text">{{ opt }}</span>
+                  <div class="poll-bar" [style.width.%]="pollPct(poll, i)"></div>
+                  <span class="poll-pct">{{ pollPct(poll, i) }}%</span>
+                </button>
+              }
+            </div>
+            <div class="poll-footer">
+              <span>{{ poll.total_votes }} votos</span>
+              <span>@{{ poll.creator_alias }}</span>
+              <span>Cierra {{ timeAgo(poll.closes_at) }}</span>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  }
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       RANKING TAB
+       ════════════════════════════════════════════════════════════════════ -->
+  @if (activeTab === 'ranking') {
+    <div class="section-header"><h2>🏆 Top Inversores BVC</h2></div>
+    <div class="ranking-types">
+      <button [class.active]="leaderType==='reputation'" (click)="switchLeaderType('reputation')">⭐ Reputación</button>
+      <button [class.active]="leaderType==='followers'" (click)="switchLeaderType('followers')">👥 Seguidores</button>
+      <button [class.active]="leaderType==='predictions'" (click)="switchLeaderType('predictions')">🔮 Predicciones</button>
+      <button [class.active]="leaderType==='roi'" (click)="switchLeaderType('roi')">📈 ROI</button>
+    </div>
+    @if (leaderLoading) {
+      <div class="loading-state"><mat-spinner diameter="32"></mat-spinner></div>
+    } @else if (leaderboard.length === 0) {
+      <div class="empty-state glass-card"><div class="empty-icon">🏆</div><h3>Sin datos</h3><p>Activa tu perfil público para participar</p></div>
+    } @else {
+      <div class="leader-list">
+        @for (e of leaderboard; track e.rank) {
+          <div class="leader-row" [class.leader-me]="e.is_me" [class.leader-top3]="e.rank <= 3">
+            <span class="leader-rank">
+              @if (e.rank === 1) { 🥇 } @else if (e.rank === 2) { 🥈 } @else if (e.rank === 3) { 🥉 } @else { #{{ e.rank }} }
+            </span>
+            <div class="leader-avatar">{{ e.alias[0]?.toUpperCase() || '?' }}</div>
+            <div class="leader-info">
+              <span class="leader-alias">@{{ e.alias }}</span>
+              <span class="leader-level">{{ levelIcon(e.level) }} {{ e.level }}</span>
+            </div>
+            <span class="leader-value">
+              @if (leaderType === 'roi') { {{ e.value > 0 ? '+' : '' }}{{ e.value }}% }
+              @else if (leaderType === 'predictions') { {{ e.value }}% }
+              @else { {{ e.value }} }
+            </span>
+          </div>
+        }
+      </div>
+    }
+  }
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       MOOD TAB (Sentimiento)
+       ════════════════════════════════════════════════════════════════════ -->
+  @if (activeTab === 'mood') {
+    <div class="section-header"><h2>📊 Sentimiento del Mercado BVC</h2><p class="section-sub">¿Cómo ves el mercado hoy?</p></div>
+
+    @if (moodLoading) {
+      <div class="loading-state"><mat-spinner diameter="32"></mat-spinner></div>
+    } @else if (mood) {
+      <div class="mood-card glass-card">
+        <div class="mood-vote-row">
+          <button class="mood-btn mood-bull" [class.active]="mood.my_vote === 'bull'" (click)="voteMood('bull')">
+            <span class="mood-emoji">🐂</span><span>Alcista</span>
+          </button>
+          <button class="mood-btn mood-neutral" [class.active]="mood.my_vote === 'neutral'" (click)="voteMood('neutral')">
+            <span class="mood-emoji">😐</span><span>Neutral</span>
+          </button>
+          <button class="mood-btn mood-bear" [class.active]="mood.my_vote === 'bear'" (click)="voteMood('bear')">
+            <span class="mood-emoji">🐻</span><span>Bajista</span>
+          </button>
+        </div>
+        <div class="mood-bars">
+          <div class="mood-bar-row">
+            <span class="mood-label">🐂 Alcista</span>
+            <div class="mood-bar-track"><div class="mood-bar-fill mood-fill-bull" [style.width.%]="mood.today.bull_pct"></div></div>
+            <span class="mood-pct">{{ mood.today.bull_pct }}%</span>
+          </div>
+          <div class="mood-bar-row">
+            <span class="mood-label">😐 Neutral</span>
+            <div class="mood-bar-track"><div class="mood-bar-fill mood-fill-neutral" [style.width.%]="mood.today.neutral_pct"></div></div>
+            <span class="mood-pct">{{ mood.today.neutral_pct }}%</span>
+          </div>
+          <div class="mood-bar-row">
+            <span class="mood-label">🐻 Bajista</span>
+            <div class="mood-bar-track"><div class="mood-bar-fill mood-fill-bear" [style.width.%]="mood.today.bear_pct"></div></div>
+            <span class="mood-pct">{{ mood.today.bear_pct }}%</span>
+          </div>
+        </div>
+        <p class="mood-total">{{ mood.today.total }} votos hoy</p>
+      </div>
+    }
+  }
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       NETWORK ACTIVITY TAB (¿Qué compra la red?)
+       ════════════════════════════════════════════════════════════════════ -->
+  @if (activeTab === 'network') {
+    <div class="section-header">
+      <div><h2>🔥 ¿Qué está comprando la red?</h2>
+      <p class="section-sub">Actividad anónima · últimos 7 días · {{ networkTotalUsers }} inversores</p></div>
+    </div>
+
+    @if (networkLoading) {
+      <div class="loading-state"><mat-spinner diameter="32"></mat-spinner></div>
+    } @else if (networkStocks.length === 0) {
+      <div class="empty-state glass-card"><div class="empty-icon">🔥</div><h3>Sin actividad reciente</h3><p>No hay operaciones de usuarios públicos</p></div>
+    } @else {
+      <div class="network-list">
+        @for (stock of networkStocks; track stock.symbol) {
+          <div class="network-row glass-card" [class.net-buy]="stock.net_sentiment==='buy'" [class.net-sell]="stock.net_sentiment==='sell'">
+            <div class="net-sym">
+              <span class="net-symbol">{{ stock.symbol }}</span>
+              <span class="net-name">{{ stock.name }}</span>
+              @if (livePrice(stock.symbol)) {
+                <span class="net-live-price">Bs {{ livePrice(stock.symbol) | number:'1.2-4' }}</span>
+              }
+            </div>
+            <div class="net-stats">
+              <span class="net-buyers">🟢 {{ stock.buyers }} ({{ stock.buy_pct }}%)</span>
+              <span class="net-sellers">🔴 {{ stock.sellers }} ({{ stock.sell_pct }}%)</span>
+            </div>
+            <span class="net-badge" [class.badge-buy]="stock.net_sentiment==='buy'" [class.badge-sell]="stock.net_sentiment==='sell'">
+              {{ stock.net_sentiment === 'buy' ? '📈 COMPRA' : stock.net_sentiment === 'sell' ? '📉 VENTA' : '➡️ NEUTRO' }}
+            </span>
+          </div>
+        }
+      </div>
+    }
+  }
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       TOURNAMENTS TAB
+       ════════════════════════════════════════════════════════════════════ -->
+  @if (activeTab === 'tournaments') {
+    <div class="section-header"><h2>🏆 Torneos Paper Trading</h2><p class="section-sub">Compite con otros inversores sin riesgo real</p></div>
+    @if (tournamentsLoading) {
+      <div class="loading-state"><mat-spinner diameter="32"></mat-spinner></div>
+    } @else if (tournaments.length === 0) {
+      <div class="empty-state glass-card"><div class="empty-icon">🏆</div><h3>Sin torneos activos</h3><p>Próximamente se abrirán torneos</p></div>
+    } @else {
+      <div class="tournament-list">
+        @for (t of tournaments; track t.id) {
+          <div class="tournament-card glass-card">
+            <div class="tour-header">
+              <h3>{{ t.title }}</h3>
+              <span class="tour-badge" [class.tour-active]="t.is_active">{{ t.is_active ? '🟢 Activo' : '⏹️ Fin' }}</span>
+            </div>
+            <p class="tour-desc">{{ t.description }}</p>
+            <div class="tour-stats">
+              <span>💰 ${{ t.initial_balance | number:'1.0-0' }}</span>
+              <span>👥 {{ t.participants }}/{{ t.max_participants }}</span>
+            </div>
+            <div class="tour-actions">
+              @if (!t.joined && t.is_active) {
+                <button class="join-btn" (click)="joinTournament(t.id)"><mat-icon>sports_esports</mat-icon> Unirse</button>
+              } @else if (t.joined) {
+                <span class="joined-badge">✅ Inscrito @if (t.my_roi !== null) { · ROI: {{ t.my_roi }}% }</span>
+              }
+              <button class="standings-btn" (click)="viewStandings(t.id)"><mat-icon>format_list_numbered</mat-icon> Posiciones</button>
+            </div>
+            @if (selectedTournament === t.id) {
+              <div class="standings-section">
+                @if (standingsLoading) { <div class="loading-state"><mat-spinner diameter="24"></mat-spinner></div> }
+                @else if (standings.length === 0) { <p class="text-muted">Sin participantes</p> }
+                @else {
+                  <table class="standings-table">
+                    <thead><tr><th>#</th><th>Inversor</th><th>Valor</th><th>ROI</th><th>Trades</th></tr></thead>
+                    <tbody>
+                      @for (s of standings; track s.rank) {
+                        <tr [class.standing-me]="s.is_me">
+                          <td>{{ s.rank <= 3 ? ['🥇','🥈','🥉'][s.rank-1] : '#'+s.rank }}</td>
+                          <td>@{{ s.alias }}</td>
+                          <td>${{ s.current_value | number:'1.2-2' }}</td>
+                          <td [class.txt-up]="s.roi_pct >= 0" [class.txt-dn]="s.roi_pct < 0">{{ s.roi_pct >= 0 ? '+' : '' }}{{ s.roi_pct }}%</td>
+                          <td>{{ s.trades_count }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
+  }
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       CONFIG TAB (Profile + Network + visible_symbols)
+       ════════════════════════════════════════════════════════════════════ -->
+  @if (activeTab === 'config') {
+    <!-- Sub-tabs -->
+    <div class="config-subtabs">
+      <button [class.active]="configSubTab==='profile'" (click)="selectConfigSub('profile')"><mat-icon>person</mat-icon> Mi Perfil</button>
+      <button [class.active]="configSubTab==='people'" (click)="selectConfigSub('people')"><mat-icon>public</mat-icon> Explorar</button>
+      <button [class.active]="configSubTab==='followers'" (click)="selectConfigSub('followers')"><mat-icon>group</mat-icon> Seguidores</button>
+      <button [class.active]="configSubTab==='following'" (click)="selectConfigSub('following')"><mat-icon>person_add</mat-icon> Siguiendo</button>
+    </div>
+
+    <!-- Profile config -->
+    @if (configSubTab === 'profile') {
+      @if (profileLoading) {
+        <div class="loading-state"><mat-spinner diameter="32"></mat-spinner><p>Cargando perfil...</p></div>
+      } @else {
+        <!-- Profile view card -->
+        @if (!editMode && profile) {
+          <div class="profile-view glass-card">
+            <div class="pv-top">
+              <div class="pv-avatar">{{ avatarLetter(profile.alias) }}</div>
+              <div class="pv-info">
+                <h2 class="pv-alias">@{{ profile.alias }}</h2>
+                <p class="pv-bio">{{ profile.bio || 'Sin biografía' }}</p>
+                <div class="pv-badges">
+                  <span class="vis-chip" [class.public]="profile.is_public">
+                    <mat-icon>{{ profile.is_public ? 'public' : 'lock' }}</mat-icon>
+                    {{ profile.is_public ? 'Público' : 'Privado' }}
+                  </span>
+                  <span class="level-chip">{{ levelIcon(profile.level || 'novato') }} {{ profile.level || 'novato' }}</span>
+                  <span class="pts-chip">⭐ {{ profile.reputation_points || 0 }} pts</span>
+                </div>
+              </div>
+              <div class="pv-actions">
+                <button class="edit-btn" (click)="editMode=true; form={...profile!}"><mat-icon>edit</mat-icon> Editar</button>
+              </div>
+            </div>
+            <div class="pv-perms" *ngIf="profile.is_public">
+              <span class="perm-title">Datos visibles para seguidores:</span>
+              <div class="perm-chips">
+                @if (profile.show_capital_initial) { <span class="perm-chip">💰 Capital</span> }
+                @if (profile.show_current_value) { <span class="perm-chip">📊 Valor actual</span> }
+                @if (profile.show_pnl) { <span class="perm-chip">📈 P&L</span> }
+                @if (profile.show_holdings) { <span class="perm-chip">🏦 Posiciones</span> }
+                @if (profile.show_top_positions) { <span class="perm-chip">🔝 Top 3</span> }
+                @if (profile.show_transactions) { <span class="perm-chip">📋 Transacciones</span> }
+                @if (profile.notify_on_transaction) { <span class="perm-chip perm-notify">🔔 Notifica TX</span> }
+              </div>
+              @if (profile.visible_symbols && profile.visible_symbols.length > 0) {
+                <div class="visible-symbols-display">
+                  <span class="perm-title">Acciones visibles:</span>
+                  <div class="perm-chips">
+                    @for (s of profile.visible_symbols; track s) {
+                      <span class="perm-chip symbol-chip">{{ s }}</span>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- Edit form -->
+        @if (editMode) {
+          <div class="edit-form glass-card">
+            <div class="form-header">
+              <mat-icon>person_pin</mat-icon>
+              <div>
+                <h2>{{ profile ? 'Editar Perfil' : 'Crear Perfil de Red' }}</h2>
+                <p>Tu <strong>alias</strong> es lo único visible. Tu nombre y email nunca se comparten.</p>
+              </div>
+            </div>
+
+            <div class="form-privacy-alert">
+              <mat-icon>shield</mat-icon>
+              <p>Protegido por <strong>CRBV Art. 28 y 60</strong> (Habeas Data). Tú controlas qué datos compartes.</p>
+            </div>
+
+            <div class="form-fields">
+              <div class="field-group">
+                <label>Alias público <span class="req">*</span></label>
+                <div class="alias-wrap">
+                  <span class="at">@</span>
+                  <input [(ngModel)]="form.alias" placeholder="inversor_bvc_2026" maxlength="40">
+                </div>
+                @if (aliasError) { <span class="field-error">{{ aliasError }}</span> }
+                <span class="field-hint">Solo letras, números, _ . - · 3–40 chars</span>
+              </div>
+
+              <div class="field-group">
+                <label>Bio</label>
+                <textarea [(ngModel)]="form.bio" placeholder="Inversor venezolano. Largo plazo, sector bancario." maxlength="280" rows="2"></textarea>
+                <span class="field-hint">{{ form.bio.length }}/280</span>
+              </div>
+            </div>
+
+            <!-- Visibility -->
+            <div class="toggle-section">
+              <h3>Visibilidad</h3>
+              <div class="toggle-row">
+                <div class="toggle-info"><span class="toggle-label">Perfil público</span><span class="toggle-sub">Apareces en la red</span></div>
+                <mat-slide-toggle [(ngModel)]="form.is_public" color="accent"></mat-slide-toggle>
+              </div>
+              <div class="toggle-row">
+                <div class="toggle-info"><span class="toggle-label">Aparecer en ranking</span><span class="toggle-sub">Visible en leaderboard</span></div>
+                <mat-slide-toggle [(ngModel)]="form.show_in_leaderboard" color="accent"></mat-slide-toggle>
+              </div>
+            </div>
+
+            @if (form.is_public) {
+              <div class="toggle-section">
+                <h3>¿Qué pueden ver tus seguidores?</h3>
+                <div class="perm-warning"><mat-icon>warning_amber</mat-icon> Solo activa lo que estés cómodo mostrando.</div>
+
+                <div class="toggle-row"><div class="toggle-info"><span class="toggle-label">💰 Capital inicial</span></div><mat-slide-toggle [(ngModel)]="form.show_capital_initial" color="primary"></mat-slide-toggle></div>
+                <div class="toggle-row"><div class="toggle-info"><span class="toggle-label">📊 Valor actual</span></div><mat-slide-toggle [(ngModel)]="form.show_current_value" color="primary"></mat-slide-toggle></div>
+                <div class="toggle-row"><div class="toggle-info"><span class="toggle-label">📈 P&L (ganancia/pérdida)</span></div><mat-slide-toggle [(ngModel)]="form.show_pnl" color="primary"></mat-slide-toggle></div>
+                <div class="toggle-row"><div class="toggle-info"><span class="toggle-label">🔝 Top 3 posiciones</span></div><mat-slide-toggle [(ngModel)]="form.show_top_positions" color="primary"></mat-slide-toggle></div>
+                <div class="toggle-row"><div class="toggle-info"><span class="toggle-label">🏦 Posiciones abiertas</span></div><mat-slide-toggle [(ngModel)]="form.show_holdings" color="primary"></mat-slide-toggle></div>
+
+                <!-- VISIBLE SYMBOLS SELECTOR -->
+                @if (form.show_holdings && allStocks.length > 0) {
+                  <div class="stocks-selector">
+                    <h4>🎯 Selecciona qué acciones mostrar:</h4>
+                    <p class="stocks-hint">Si no seleccionas ninguna, se muestran todas.</p>
+                    <div class="stocks-grid">
+                      @for (s of allStocks; track s) {
+                        <button class="stock-chip" [class.active]="isStockVisible(s)" (click)="toggleStock(s)">
+                          <mat-icon>{{ isStockVisible(s) ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
+                          {{ s }}
+                        </button>
+                      }
+                    </div>
+                  </div>
+                }
+
+                <div class="toggle-row"><div class="toggle-info"><span class="toggle-label">📋 Historial de transacciones</span></div><mat-slide-toggle [(ngModel)]="form.show_transactions" color="primary"></mat-slide-toggle></div>
+                <div class="toggle-row toggle-warn"><div class="toggle-info"><span class="toggle-label">🔔 Notificar seguidores en TX</span><span class="toggle-sub">Se les avisa cuando operas</span></div><mat-slide-toggle [(ngModel)]="form.notify_on_transaction" color="warn"></mat-slide-toggle></div>
+              </div>
+            }
+
+            <!-- Legal consent -->
+            @if (!profile) {
+              <div class="legal-section">
+                <mat-checkbox [(ngModel)]="form.accepted_terms" color="primary">
+                  Acepto los <a href="javascript:void(0)" (click)="showTerms($event)">Términos</a> y <a href="javascript:void(0)" (click)="showPrivacy($event)">Política de Privacidad</a>.
+                </mat-checkbox>
+              </div>
+            }
+
+            <div class="form-actions">
+              @if (profile) { <button class="cancel-btn" (click)="editMode=false">Cancelar</button> }
+              <button class="save-btn" (click)="saveProfile()" [disabled]="profileSaving">
+                @if (profileSaving) { <mat-icon class="spin">sync</mat-icon> } @else { <mat-icon>save</mat-icon> }
+                {{ profileSaving ? 'Guardando...' : (profile ? 'Guardar' : 'Crear perfil') }}
+              </button>
+              @if (profile) { <button class="delete-btn" (click)="deleteProfile()"><mat-icon>delete</mat-icon></button> }
+            </div>
+          </div>
+        }
+      }
+    }
+
+    <!-- Explore people -->
+    @if (configSubTab === 'people') {
+      @if (networkPeopleLoading) {
+        <div class="loading-state"><mat-spinner diameter="32"></mat-spinner></div>
+      } @else if (networkFeed.length === 0) {
+        <div class="empty-state glass-card"><div class="empty-icon">👥</div><h3>Sin perfiles públicos</h3><p>Crea tu perfil y activa "Público" para aparecer</p></div>
+      } @else {
+        <div class="people-grid">
+          @for (p of networkFeed; track p.alias) {
+            <div class="person-card glass-card">
+              <div class="person-avatar">{{ avatarLetter(p.alias) }}</div>
+              <div class="person-info">
+                <span class="person-alias">@{{ p.alias }}</span>
+                <span class="person-bio">{{ p.bio || '—' }}</span>
+              </div>
+              <button class="follow-action-btn" [class.following]="p.is_followed" (click)="!p.is_followed && follow(p.alias)" [disabled]="p.is_followed">
+                <mat-icon>{{ p.is_followed ? 'check' : 'person_add' }}</mat-icon>
+                {{ p.is_followed ? 'Siguiendo' : 'Seguir' }}
+              </button>
+            </div>
+          }
+        </div>
+      }
+    }
+
+    <!-- Followers -->
+    @if (configSubTab === 'followers') {
+      @if (followers.length === 0) {
+        <div class="empty-state glass-card"><div class="empty-icon">👤</div><h3>Sin seguidores</h3><p>Activa tu perfil público</p></div>
+      } @else {
+        <div class="people-list">
+          @for (f of followers; track f.alias) {
+            <div class="person-row glass-card"><div class="person-avatar sm">{{ avatarLetter(f.alias) }}</div><div class="person-info"><span class="person-alias">@{{ f.alias }}</span><span class="person-bio">{{ f.bio || '—' }}</span></div></div>
+          }
+        </div>
+      }
+    }
+
+    <!-- Following -->
+    @if (configSubTab === 'following') {
+      @if (following.length === 0) {
+        <div class="empty-state glass-card"><div class="empty-icon">🔍</div><h3>No sigues a nadie</h3><p>Explora la red</p></div>
+      } @else {
+        <div class="people-list">
+          @for (f of following; track f.alias) {
+            <div class="person-row glass-card">
+              <div class="person-avatar sm">{{ avatarLetter(f.alias) }}</div>
+              <div class="person-info"><span class="person-alias">@{{ f.alias }}</span><span class="person-bio">{{ f.bio || '—' }}</span></div>
+              <button class="unfollow-btn" (click)="unfollow(f.alias)">Dejar de seguir</button>
+            </div>
+          }
+        </div>
+      }
+    }
+  }
+
+</div>
+
+<!-- Bottom nav -->
+<nav class="mobile-bottom-nav">
+  <a class="mbn-item" routerLink="/dashboard" routerLinkActive="active">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+    <span>Inicio</span>
+  </a>
+  <a class="mbn-item" routerLink="/portfolio" routerLinkActive="active">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M11 2v20c-5.07-.5-9-4.79-9-10s3.93-9.5 9-10zm2.03 0v8.99H22c-.47-4.74-4.24-8.52-8.97-8.99zm0 11.01V22c4.74-.47 8.5-4.25 8.97-8.99h-8.97z"/></svg>
+    <span>Portafolio</span>
+  </a>
+  <a class="mbn-item" routerLink="/community" routerLinkActive="active">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+    <span>Comunidad</span>
+  </a>
+  <a class="mbn-item" routerLink="/goals" routerLinkActive="active">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+    <span>Objetivos</span>
+  </a>
+  <a class="mbn-item" routerLink="/analisis" routerLinkActive="active">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M3.5 18.5l6-6 4 4L22 6.92 20.59 5.5l-7.09 8-4-4L2 17z"/></svg>
+    <span>Análisis</span>
+  </a>
+</nav>

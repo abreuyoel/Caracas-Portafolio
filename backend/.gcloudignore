@@ -1,0 +1,35 @@
+.gcloudignore
+.git/
+.gitignore
+.github/
+.vscode/
+
+# Entorno virtual Python (nunca va al build)
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Variables de entorno locales
+.env
+*.env
+.env.*
+
+# Archivos de desarrollo/utilidad local
+check_*.py
+check_*.txt
+test_*.py
+verify_*.py
+migrate_*.py
+migration_*.py
+update_db.py
+import_bcv_rates.py
+scratch/
+
+# Logs y temporales
+*.log
+*.db
+*.sqlite

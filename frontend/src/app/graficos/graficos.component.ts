@@ -9,6 +9,8 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { environment } from '../../environments/environment';
 import * as LightweightCharts from 'lightweight-charts';
+import { BvcSocketService } from '../core/services/bvc-socket.service';
+import { detectPatterns, patternsToMarkers, Pattern } from './candle-patterns';
 
 // ── Interfaces para tipado fuerte ────────────────────────────────────────────
 interface Candle {
@@ -101,8 +103,11 @@ interface AllIndicators {
 }
 
 // ── Cache key helpers ─────────────────────────────────────────────────────────
-const STOCKS_CACHE_KEY   = 'bvc_stocks_cache';
-const STOCKS_CACHE_DATE  = 'bvc_stocks_cache_date';
+const STOCKS_CACHE_KEY  = 'bvc_stocks_cache';
+const STOCKS_CACHE_TS   = 'bvc_stocks_cache_ts';  // unix ms timestamp
+const STOCKS_CACHE_TTL  = 60 * 60 * 1000;          // 1 hour
+/** @deprecated kept for cleanup */
+const STOCKS_CACHE_DATE = 'bvc_stocks_cache_date';
 
 @Component({
   selector: 'app-graficos',
@@ -120,6 +125,7 @@ export class GraficosComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('obvContainer')    obvEl!: ElementRef;
   @ViewChild('aroonContainer')  aroonEl!: ElementRef;
   @ViewChild('stochContainer')  stochEl!: ElementRef;
+  @ViewChild('vpCanvas')        vpCanvasEl!: ElementRef<HTMLCanvasElement>;
 
   stocks: Stock[] = [];
   searchFilter    = '';
@@ -157,6 +163,13 @@ export class GraficosComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private chartSubscriptions: (() => void)[] = [];
 
+  /** Returns today's date as 'YYYY-MM-DD' in LOCAL time (not UTC).
+   *  toISOString() uses UTC and can be off by 1 day in timezones behind UTC. */
+  private localDateStr(d: Date = new Date()): string {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+
   private filterCandlesByTF(candles: Candle[]): Candle[] {
     if (!candles.length || this.currentTF === 'Todo') return candles;
     const now = new Date();
@@ -167,7 +180,7 @@ export class GraficosComponent implements OnInit, OnDestroy, AfterViewInit {
       case '6S': cut.setMonth(now.getMonth() - 6); break;
       case '1A': cut.setFullYear(now.getFullYear() - 1); break;
     }
-    const start = cut.toISOString().split('T')[0];
+    const start = this.localDateStr(cut);
     return candles.filter(c => c.time >= start);
   }
 
@@ -189,7 +202,10 @@ export class GraficosComponent implements OnInit, OnDestroy, AfterViewInit {
     { id:'aroon',    label:'Aroon',      enabled:false, color:'#ff66cc' },
     { id:'stoch',    label:'Stoch',      enabled:false, color:'#ff66aa' },
     { id:'ichimoku', label:'Ichimoku',   enabled:false, color:'#66aaff' },
+    { id:'patterns', label:'Patrones',   enabled:false, color:'#d29922' },
   ];
+
+  detectedPatterns: Pattern[] = [];
 
   drawingTools: DrawingTool[] = [
     { id:'cursor',  label:'Cursor',      icon:'↖',  active:true  },
@@ -264,6 +280,35 @@ export class GraficosComponent implements OnInit, OnDestroy, AfterViewInit {
   dmiValue = 0;
   stochValue = 0;
   mfiValue = 0;
+  adrPercent = 0;
+  adrUsed = 0;         // % of the 20-day ADR consumed today
+  bbwValue = 0;        // Bollinger Band Width %
+  bbwTrend: 'contracting' | 'expanding' | 'neutral' = 'neutral';
+
+  // ── Advanced Indicators ────────────────────────────────────────────────────
+  marketRegime: 'alcista' | 'bajista' | 'lateral' | 'volatil' = 'lateral';
+  kellyF = 0;           // Half-Kelly fraction (0-1)
+  autoCorr30 = 0;       // 30-day lag-1 autocorrelation of returns
+  liquidityZ = 0;       // Volume Z-Score vs 20d average
+  momentumScore = 0;    // Rate of change vs 20d avg (Smart Beta proxy)
+
+  // ── CVD (Cumulative Volume Delta) ─────────────────────────────────────────
+  cvdValue       = 0;   // Cumulative delta (buy vol - sell vol)
+  cvdDeltaLast   = 0;   // Last candle delta
+  cvdTrend: 'acumulacion' | 'distribucion' | 'neutral' = 'neutral';
+
+  // ── Volume Profile ────────────────────────────────────────────────────────
+  vpHvn          = 0;   // High Volume Node price (POC)
+  vpLvn          = 0;   // Low Volume Node price
+  showVolumeProfile = false;
+  private _vpLevels: { price: number; volume: number; pct: number }[] = [];
+
+  // ── Price Percentile (252-day) ────────────────────────────────────────────
+  pricePercentile252 = 0; // Where current price sits in 1-year distribution (0-100)
+
+  // ── Value Zone / CAPE proxy (price Z-score vs 1-year avg) ─────────────────
+  valueZoneScore = 0;
+  valueZoneLabel = '';
 
   analyticsPos = { x: -1, y: 80 };
   private _boundDragMove!: (e: MouseEvent) => void;
@@ -275,7 +320,7 @@ export class GraficosComponent implements OnInit, OnDestroy, AfterViewInit {
       const chartWrap = this.chartEl?.nativeElement?.closest('.chart-wrap') as HTMLElement;
       if (chartWrap && this.analyticsPos.x === -1) {
         const rect = chartWrap.getBoundingClientRect();
-        this.analyticsPos = { x: rect.width - 295, y: 80 };
+        this.analyticsPos = { x: Math.max(0, rect.width - 430), y: 70 };
       }
       this.updateAdvancedIndicators();
     }
@@ -290,7 +335,7 @@ export class GraficosComponent implements OnInit, OnDestroy, AfterViewInit {
       const rect = chartWrap?.getBoundingClientRect();
       let nx = e.clientX - startX;
       let ny = e.clientY - startY;
-      if (rect) { nx = Math.max(0, Math.min(nx, rect.width - 285)); ny = Math.max(0, Math.min(ny, rect.height - 50)); }
+      if (rect) { nx = Math.max(0, Math.min(nx, rect.width - 425)); ny = Math.max(0, Math.min(ny, rect.height - 50)); }
       this.analyticsPos = { x: nx, y: ny };
       this.cd.detectChanges();
     };
@@ -326,7 +371,138 @@ export class GraficosComponent implements OnInit, OnDestroy, AfterViewInit {
     this.dmiValue    = this.dmi(data);
     this.stochValue  = this.stochastic(data);
     this.mfiValue    = this.mfi(data);
+    const adrResult  = this.calcAdr(data);
+    this.adrPercent  = adrResult.adr;
+    this.adrUsed     = adrResult.usedPct;
+    const bbwResult  = this.calcBbw(data);
+    this.bbwValue    = bbwResult.width;
+    this.bbwTrend    = bbwResult.trend;
+
+    this.marketRegime   = this.calcMarketRegime(data);
+    this.kellyF         = this.calcKelly(data);
+    this.autoCorr30     = this.calcAutoCorr(data, 30);
+    this.liquidityZ     = this.calcLiquidityZ(data);
+    this.momentumScore  = this.calcMomentum(data);
+
+    // ── New professional indicators ─────────────────────────────────────────
+    const cvd = this.calcCvd(data);
+    this.cvdValue     = cvd.cumulative;
+    this.cvdDeltaLast = cvd.lastDelta;
+    this.cvdTrend     = cvd.cumulative > 0
+      ? (cvd.lastDelta >= 0 ? 'acumulacion' : 'neutral')
+      : (cvd.lastDelta <= 0 ? 'distribucion' : 'neutral');
+
+    const vp = this.calcVolumeProfile(data);
+    this.vpHvn    = vp.hvn;
+    this.vpLvn    = vp.lvn;
+    this._vpLevels = vp.levels;
+
+    this.pricePercentile252 = this.calcPricePercentile(data);
+
+    const vz = this.calcValueZone(data);
+    this.valueZoneScore = vz.score;
+    this.valueZoneLabel = vz.label;
+
+    if (this.showVolumeProfile) {
+      setTimeout(() => this.drawVolumeProfileOverlay(), 50);
+    }
+
     this.cd.detectChanges();
+  }
+
+  toggleVolumeProfile() {
+    this.showVolumeProfile = !this.showVolumeProfile;
+    if (this.showVolumeProfile) {
+      setTimeout(() => this.drawVolumeProfileOverlay(), 80);
+    } else if (this.vpCanvasEl) {
+      const ctx = this.vpCanvasEl.nativeElement.getContext('2d');
+      if (ctx) ctx.clearRect(0, 0, this.vpCanvasEl.nativeElement.width, this.vpCanvasEl.nativeElement.height);
+    }
+  }
+
+  private drawVolumeProfileOverlay() {
+    if (!this.vpCanvasEl || !this.series || !this._vpLevels.length) return;
+    const canvas = this.vpCanvasEl.nativeElement;
+    const pane   = this.chartEl?.nativeElement as HTMLElement;
+    if (!pane) return;
+
+    canvas.width  = pane.offsetWidth;
+    canvas.height = pane.offsetHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const BAR_MAX = 90;   // max bar width px
+    const GAP     = 56;   // right-side price-scale gap
+
+    // Estimate bar height from neighbouring levels
+    const sorted = [...this._vpLevels].sort((a, b) => b.price - a.price);
+    let avgSpacing = 4;
+    if (sorted.length > 1) {
+      const spacings: number[] = [];
+      for (let i = 0; i < sorted.length - 1; i++) {
+        const ya = this.series.priceToCoordinate(sorted[i].price);
+        const yb = this.series.priceToCoordinate(sorted[i + 1].price);
+        if (ya !== null && yb !== null) spacings.push(Math.abs(yb - ya));
+      }
+      if (spacings.length) avgSpacing = Math.max(2, spacings.reduce((s, v) => s + v, 0) / spacings.length);
+    }
+    const barH = Math.max(2, Math.min(avgSpacing - 0.5, 12));
+
+    for (const lvl of this._vpLevels) {
+      const y = this.series.priceToCoordinate(lvl.price);
+      if (y === null || y < 2 || y > canvas.height - 2) continue;
+
+      const w      = Math.max(2, lvl.pct * BAR_MAX);
+      const x      = canvas.width - w - GAP;
+      const isHvn  = Math.abs(lvl.price - this.vpHvn) < 1e-9;
+      const isLvn  = Math.abs(lvl.price - this.vpLvn) < 1e-9;
+
+      // Background track
+      ctx.fillStyle = 'rgba(255,255,255,0.03)';
+      ctx.fillRect(canvas.width - BAR_MAX - GAP, y - barH / 2, BAR_MAX, barH);
+
+      // Colored bar with gradient
+      const grad = ctx.createLinearGradient(x, 0, x + w, 0);
+      if (isHvn) {
+        grad.addColorStop(0, 'rgba(255,185,0,0.15)');
+        grad.addColorStop(1, 'rgba(255,185,0,0.85)');
+      } else if (isLvn) {
+        grad.addColorStop(0, 'rgba(255,77,106,0.12)');
+        grad.addColorStop(1, 'rgba(255,77,106,0.70)');
+      } else {
+        grad.addColorStop(0, 'rgba(76,98,255,0.08)');
+        grad.addColorStop(1, 'rgba(76,98,255,0.45)');
+      }
+      ctx.fillStyle = grad;
+      ctx.fillRect(x, y - barH / 2, w, barH);
+    }
+
+    // Labels for HVN and LVN
+    ctx.font = 'bold 10px "JetBrains Mono", monospace';
+    ctx.textAlign = 'right';
+    if (this.vpHvn > 0) {
+      const yH = this.series.priceToCoordinate(this.vpHvn);
+      if (yH !== null && yH > 14 && yH < canvas.height - 4) {
+        ctx.fillStyle = 'rgba(0,0,0,0.55)';
+        const label = 'HVN ' + this.vpHvn.toFixed(4);
+        const tw = ctx.measureText(label).width;
+        ctx.fillRect(canvas.width - GAP - tw - 10, yH - barH / 2 - 12, tw + 8, 14);
+        ctx.fillStyle = 'rgba(255,185,0,1)';
+        ctx.fillText(label, canvas.width - GAP - 2, yH - barH / 2 - 1);
+      }
+    }
+    if (this.vpLvn > 0) {
+      const yL = this.series.priceToCoordinate(this.vpLvn);
+      if (yL !== null && yL > 14 && yL < canvas.height - 4) {
+        ctx.fillStyle = 'rgba(0,0,0,0.55)';
+        const label = 'LVN ' + this.vpLvn.toFixed(4);
+        const tw = ctx.measureText(label).width;
+        ctx.fillRect(canvas.width - GAP - tw - 10, yL - barH / 2 - 12, tw + 8, 14);
+        ctx.fillStyle = 'rgba(255,77,106,1)';
+        ctx.fillText(label, canvas.width - GAP - 2, yL - barH / 2 - 1);
+      }
+    }
   }
 
   private apiUrl = environment.apiUrl;
@@ -338,9 +514,63 @@ export class GraficosComponent implements OnInit, OnDestroy, AfterViewInit {
     );
   }
 
-  constructor(private http: HttpClient, private cd: ChangeDetectorRef, private router: Router) {}
+  constructor(
+    private http: HttpClient, 
+    private cd: ChangeDetectorRef, 
+    private router: Router,
+    public bvcSocket: BvcSocketService
+  ) {}
 
-  ngOnInit() { this.loadActiveStocks(); this.loadBcvRates(); this.loadHistoricalUsdRates();}
+  private liveSub: any = null;
+
+  ngOnInit() { 
+    this.loadActiveStocks(); 
+    this.loadBcvRates(); 
+    this.loadHistoricalUsdRates();
+    this.bvcSocket.connect();
+    // Subscribe to real-time prices for chart updates
+    this.liveSub = this.bvcSocket.prices$.subscribe(prices => {
+      if (!this.selectedSymbol || !prices[this.selectedSymbol]) return;
+      const newPrice = prices[this.selectedSymbol];
+      if (newPrice && newPrice !== this.currentPrice && this.candles.length > 0) {
+        this.currentPrice = newPrice;
+        // Update price change from the previous candle close
+        const prevClose = this.candles.length > 1 ? this.candles[this.candles.length - 2].close : this.candles[0].open;
+        this.priceChange = newPrice - prevClose;
+        this.priceChangePct = prevClose > 0 ? (this.priceChange / prevClose) * 100 : 0;
+
+        // Update the latest candle in-place to reflect the live tick
+        const lastCandle = this.candles[this.candles.length - 1];
+        lastCandle.close = newPrice;
+        if (newPrice > lastCandle.high) lastCandle.high = newPrice;
+        if (newPrice < lastCandle.low) lastCandle.low = newPrice;
+        
+        // Push update to the series if the chart is alive
+        if (this.series) {
+          try {
+            this.series.update({
+              time: lastCandle.time,
+              open: lastCandle.open,
+              high: lastCandle.high,
+              low: lastCandle.low,
+              close: lastCandle.close,
+            });
+          } catch {}
+        }
+
+        // Recalculate analytics if panel is open
+        if (this.showAnalytics) {
+          this.updateAdvancedIndicators();
+        }
+
+        // Update the sidebar stock list price
+        this.lastPrices[this.selectedSymbol] = newPrice;
+        this.priceChanges[this.selectedSymbol] = this.priceChangePct;
+        
+        this.cd.detectChanges();
+      }
+    });
+  }
   ngAfterViewInit() {}
   ngOnDestroy() {
     this.destroyAll();
@@ -348,6 +578,10 @@ export class GraficosComponent implements OnInit, OnDestroy, AfterViewInit {
     if (this.liveInterval) {
       clearInterval(this.liveInterval);
       this.liveInterval = null;
+    }
+    if (this.liveSub) {
+      this.liveSub.unsubscribe();
+      this.liveSub = null;
     }
     this.chartSubscriptions.forEach(unsub => { try { unsub(); } catch {} });
     this.chartSubscriptions = [];
@@ -363,14 +597,18 @@ export class GraficosComponent implements OnInit, OnDestroy, AfterViewInit {
   // ── Stock cache + loading ──────────────────────────────────────────────────
 
   loadActiveStocks() {
-    const cachedDate  = localStorage.getItem(STOCKS_CACHE_DATE);
-    const cachedData  = localStorage.getItem(STOCKS_CACHE_KEY);
-    const today       = new Date().toISOString().split('T')[0];
+    // Clear old date-based cache key
+    localStorage.removeItem(STOCKS_CACHE_DATE);
 
-    if (cachedDate === today && cachedData) {
+    const cachedTs   = parseInt(localStorage.getItem(STOCKS_CACHE_TS) ?? '0', 10);
+    const cachedData = localStorage.getItem(STOCKS_CACHE_KEY);
+    const now        = Date.now();
+
+    if (cachedData && now - cachedTs < STOCKS_CACHE_TTL) {
       try {
         this.stocks = JSON.parse(cachedData);
         this.cd.detectChanges();
+        this._autoLoadDefaultStock();
         return;
       } catch {}
     }
@@ -380,13 +618,14 @@ export class GraficosComponent implements OnInit, OnDestroy, AfterViewInit {
 
     this.http.get<Stock[]>(this.apiUrl + '/stocks/bvc/active', { headers: this.hdr() }).subscribe({
       next: (s: any) => {
-        this.stocks = (s || []).filter((x: Stock) => x.is_active !== false);
+        this.stocks = (s || []).filter((x: Stock) => x.is_active !== false && x.symbol !== 'CIE');
         try {
-          localStorage.setItem(STOCKS_CACHE_KEY,  JSON.stringify(this.stocks));
-          localStorage.setItem(STOCKS_CACHE_DATE, today);
+          localStorage.setItem(STOCKS_CACHE_KEY, JSON.stringify(this.stocks));
+          localStorage.setItem(STOCKS_CACHE_TS,  String(Date.now()));
         } catch {}
         this.loadingStocks = false;
         this.cd.detectChanges();
+        this._autoLoadDefaultStock();
       },
       error: (e: any) => {
         console.error('stocks error:', e);
@@ -394,6 +633,15 @@ export class GraficosComponent implements OnInit, OnDestroy, AfterViewInit {
         this.cd.detectChanges();
       }
     });
+  }
+
+  private _autoLoadDefaultStock(): void {
+    if (this.selectedSymbol) return; // already selected
+    const lastSymbol = localStorage.getItem('lastChartSymbol');
+    const auto = (lastSymbol && this.stocks.find(s => s.symbol === lastSymbol))
+      ? lastSymbol
+      : this.stocks[0]?.symbol;
+    if (auto) this.loadStock(auto);
   }
 
 
@@ -412,15 +660,187 @@ export class GraficosComponent implements OnInit, OnDestroy, AfterViewInit {
       console.warn('No se pudieron cargar tasas USD históricas', error);
     }
   }
-  // ── Live candle polling ───────────────────────────────────────────────────
+  // ── Live WS Push Logic ───────────────────────────────────────────────────
+
+  private wsSub: any = null;
 
   private startLivePolling(symbol: string) {
-    if (this.liveInterval) { clearInterval(this.liveInterval); this.liveInterval = null; }
+    if (this.wsSub) { this.wsSub.unsubscribe(); this.wsSub = null; }
+    
+    // Al iniciar, también pedir el "Live Candle" una vez por HTTP para tener el 'open', 'high', 'low' precisos
     this.fetchLiveCandle(symbol);
-    this.liveInterval = setInterval(() => {
-      if (this.selectedSymbol === symbol) this.fetchLiveCandle(symbol);
-      else { clearInterval(this.liveInterval); this.liveInterval = null; }
-    }, 30000);
+
+    this.wsSub = this.bvcSocket.stocksMap$.subscribe(board => {
+        if (!this.selectedSymbol || this.selectedSymbol !== symbol) return;
+        const tick = board[symbol];
+        if (!tick || !tick.PRECIO) return;
+        
+        // Emular update baseado en el tick WebSocket
+        const todayStr = this.localDateStr();
+        const lastPrice = tick.PRECIO;
+        const volume = tick.VOLUMEN || 0;
+        
+        // A falta del low/high exacto del WS, reusamos el de the last candle o lo ajustamos dinámicamente
+        let lastCandle = this.candles.length > 0 ? this.candles[this.candles.length - 1] : null;
+        let isToday = lastCandle && lastCandle.time.startsWith(todayStr);
+        
+        let live: Candle;
+        if (isToday) {
+            live = {
+               ...lastCandle!,
+               open: tick.PRECIO_APERT || lastCandle!.open,
+               close: lastPrice,
+               high: tick.PRECIO_MAX || Math.max(lastCandle!.high, lastPrice),
+               low:  tick.PRECIO_MIN || Math.min(lastCandle!.low,  lastPrice),
+               volume: tick.VOLUMEN  || lastCandle!.volume,
+               amount: tick.MONTO_EFECTIVO || lastCandle!.amount,
+               trades: tick.TOT_OP_NEGOC   || lastCandle!.trades
+            };
+        } else {
+            // Only create a new-day candle if the market is actually open today.
+            // When closed, WS keeps pushing stale ticks which would add a phantom candle.
+            if (!this.marketOpen) return;
+            // New day starting on WS – use serverDataExt OHLCV fields when available
+            live = {
+               time:   todayStr,
+               open:   tick.PRECIO_APERT || (lastPrice - (tick.VAR_ABS || 0)),
+               high:   tick.PRECIO_MAX   || lastPrice,
+               low:    tick.PRECIO_MIN   || lastPrice,
+               close:  lastPrice,
+               volume: tick.VOLUMEN      || volume,
+               amount: tick.MONTO_EFECTIVO || 0,
+               trades: tick.TOT_OP_NEGOC   || 0
+            };
+        }
+
+        this.liveCandle = live;
+        this.currentPrice   = live.close;
+        this.priceChange    = tick.VAR_ABS || 0;
+        this.priceChangePct = tick.VAR_REL || 0;
+        this.lastPrices[symbol]   = live.close;
+        this.priceChanges[symbol] = this.priceChange;
+
+        if (isToday) {
+            this.candles[this.candles.length - 1] = live;
+        } else {
+            this.candles = [...this.candles, live];
+        }
+
+        if (this.series) {
+          try {
+            const filtered = this.filterTF(this.candles);
+            if (filtered.length > 0) {
+                const shownLast = filtered[filtered.length - 1];
+                if (shownLast.time === live.time) {
+                  if (this.chartType === 'line' || this.chartType === 'area')
+                    this.series.update({ time: live.time, value: live.close });
+                  else
+                    this.series.update(live);
+                    
+                  if (this.volumeSeries) {
+                    this.volumeSeries.update({
+                      time: live.time, value: live.volume,
+                      color: live.close >= live.open ? 'rgba(38,166,65,.5)' : 'rgba(248,81,73,.5)'
+                    });
+                  }
+                }
+            }
+          } catch {
+            this.setData(this.filterTF(this.candles));
+          }
+        }
+
+        this.currentChartIndicators = this.calculateAllIndicators(this.candles);
+        this.updateIndicatorsAndContext();
+        this.updateSubChartsLive(this.candles);
+        if (this.showAnalytics) this.updateAdvancedIndicators();
+        this.cd.detectChanges();
+    });
+  }
+
+  private updateSubChartsLive(candles: Candle[]) {
+    if (!candles.length) return;
+    const last   = candles[candles.length - 1];
+    const closes = candles.map(c => c.close);
+    const times  = candles.map(c => c.time);
+
+    // RSI sub-chart
+    if (this.rsiSeries && this.lwcRsi) {
+      const rsi = this.calcRsi(closes, times, 14);
+      if (rsi.length) { try { this.rsiSeries.update(rsi[rsi.length - 1]); } catch {} }
+    }
+
+    // MACD sub-chart
+    if (this.lwcMacd) {
+      const macd = this.calcMacd(closes, times);
+      if (macd.macdLine.length   && this.macdFast) { try { this.macdFast.update(macd.macdLine[macd.macdLine.length - 1]); }   catch {} }
+      if (macd.signalLine.length && this.macdSlow) { try { this.macdSlow.update(macd.signalLine[macd.signalLine.length - 1]); } catch {} }
+      if (macd.histogram.length  && this.macdHist) { try { this.macdHist.update(macd.histogram[macd.histogram.length - 1]); }  catch {} }
+    }
+
+    // OBV / A/D sub-chart
+    if (this.lwcObv) {
+      if (this.obvSeries) {
+        const obv = this.calcObvSeries(candles);
+        if (obv.length) { try { this.obvSeries.update(obv[obv.length - 1]); } catch {} }
+      }
+      if (this.adlChartSeries) {
+        const adlArr = this.adlSeriesArr(candles);
+        if (adlArr.length) { try { this.adlChartSeries.update({ time: last.time, value: adlArr[adlArr.length - 1] }); } catch {} }
+      }
+    }
+
+    // Aroon sub-chart
+    if (this.lwcAroon && candles.length > 25) {
+      const period = 25;
+      const slice  = candles.slice(-(period + 1));
+      const highs  = slice.map(c => c.high);
+      const lows   = slice.map(c => c.low);
+      const idxH   = highs.lastIndexOf(Math.max(...highs));
+      const idxL   = lows.lastIndexOf(Math.min(...lows));
+      const aUp    = parseFloat(((idxH / period) * 100).toFixed(2));
+      const aDown  = parseFloat(((idxL / period) * 100).toFixed(2));
+      try { if (this.aroonUpSeries)   this.aroonUpSeries.update({   time: last.time, value: aUp });   } catch {}
+      try { if (this.aroonDownSeries) this.aroonDownSeries.update({ time: last.time, value: aDown }); } catch {}
+    }
+
+    // Stochastic sub-chart
+    if (this.lwcStoch && candles.length >= 14) {
+      const period = 14, smoothK = 3;
+      const sliceK = candles.slice(-period);
+      const hh = Math.max(...sliceK.map(c => c.high));
+      const ll = Math.min(...sliceK.map(c => c.low));
+      const k  = hh === ll ? 50 : ((last.close - ll) / (hh - ll)) * 100;
+      try { if (this.stochKSeries) this.stochKSeries.update({ time: last.time, value: parseFloat(k.toFixed(2)) }); } catch {}
+      if (candles.length >= period + smoothK - 1) {
+        const kVals: number[] = [];
+        for (let j = 0; j < smoothK; j++) {
+          const s = candles.slice(-(period + j), candles.length - j || undefined);
+          const h = Math.max(...s.map(c => c.high));
+          const l = Math.min(...s.map(c => c.low));
+          kVals.unshift(h === l ? 50 : ((candles[candles.length - 1 - j].close - l) / (h - l)) * 100);
+        }
+        const d = kVals.reduce((a, b) => a + b, 0) / smoothK;
+        try { if (this.stochDSeries) this.stochDSeries.update({ time: last.time, value: parseFloat(d.toFixed(2)) }); } catch {}
+      }
+    }
+
+    // Overlay series on main chart (EMA, SMA, Bollinger, VWAP)
+    if (this.lwc) {
+      if (this.overlays['ema20'])  { const v = this.ema(closes, times, 20);   if (v.length) { try { this.overlays['ema20'].update(v[v.length - 1]); }  catch {} } }
+      if (this.overlays['ema50'])  { const v = this.ema(closes, times, 50);   if (v.length) { try { this.overlays['ema50'].update(v[v.length - 1]); }  catch {} } }
+      if (this.overlays['ema200']) { const v = this.ema(closes, times, 200);  if (v.length) { try { this.overlays['ema200'].update(v[v.length - 1]); } catch {} } }
+      if (this.overlays['sma20'])  { const v = this.sma(closes, times, 20);   if (v.length) { try { this.overlays['sma20'].update(v[v.length - 1]); }  catch {} } }
+      if (this.overlays['vwap'])   { const v = this.vwap(candles);             if (v.length) { try { this.overlays['vwap'].update(v[v.length - 1]); }   catch {} } }
+      if (this.overlays['bb_u']) {
+        const bb = this.bb(closes, times, 20, 2);
+        if (bb.upper.length) {
+          try { this.overlays['bb_u'].update(bb.upper[bb.upper.length - 1]);   } catch {}
+          try { this.overlays['bb_m'].update(bb.middle[bb.middle.length - 1]); } catch {}
+          try { this.overlays['bb_l'].update(bb.lower[bb.lower.length - 1]);   } catch {}
+        }
+      }
+    }
   }
 
   enterComparisonMode() {
@@ -678,7 +1098,17 @@ export class GraficosComponent implements OnInit, OnDestroy, AfterViewInit {
       const ts  = localStorage.getItem(tsKey);
       if (!raw || !ts) return null;
       if (Date.now() - parseInt(ts) > this.HISTORY_CACHE_TTL_MS) return null;
-      return JSON.parse(raw);
+      const candles = JSON.parse(raw);
+      // Invalidate if the latest candle is older than yesterday —
+      // a new trading session happened that the cache doesn't know about.
+      if (candles && candles.length > 0) {
+        const lastDate = candles[candles.length - 1].time as string;
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().slice(0, 10);
+        if (lastDate < yesterdayStr) return null; // stale — missing at least one session
+      }
+      return candles;
     } catch { return null; }
   }
 
@@ -697,10 +1127,43 @@ export class GraficosComponent implements OnInit, OnDestroy, AfterViewInit {
     this.measurePopup = null;
     this.measureResult = '';
     this.fibLevels = [];
+    try { localStorage.setItem('lastChartSymbol', symbol); } catch {}
+
+    // ── Usar tick del socket para pre-pintar vela de hoy inmediatamente ───────
+    const socketTick = this.bvcSocket.stocksMap$.getValue()[symbol];
+    const todayStr   = this.localDateStr();
+    const socketToday: any = socketTick?.PRECIO ? {
+      time:   todayStr,
+      open:   socketTick.PRECIO_APERT || socketTick.PRECIO,
+      high:   socketTick.PRECIO_MAX   || socketTick.PRECIO,
+      low:    socketTick.PRECIO_MIN   || socketTick.PRECIO,
+      close:  socketTick.PRECIO,
+      volume: socketTick.VOLUMEN      || 0,
+      amount: socketTick.MONTO_EFECTIVO || 0,
+      trades: socketTick.TOT_OP_NEGOC   || 0,
+    } : null;
+
+    // Limpiar variables de precio inmediatamente para la UI
+    if (socketToday) {
+      this.currentPrice   = socketToday.close;
+      this.priceChange    = socketTick.VAR_ABS || 0;
+      this.priceChangePct = socketTick.VAR_REL || 0;
+    } else {
+      this.currentPrice = 0;
+      this.priceChange = 0;
+      this.priceChangePct = 0;
+    }
 
     // ── Intentar caché local primero (evita espera de scraping) ──────────────
     const cached = this.getCachedHistory(symbol);
     if (cached && cached.length > 0) {
+      // Merge socket today candle into cached history
+      const last = cached[cached.length - 1];
+      if (socketToday && last.time === todayStr) {
+        cached[cached.length - 1] = { ...last, ...socketToday };
+      } else if (socketToday && last.time < todayStr) {
+        cached.push(socketToday);
+      }
       this.candles = cached;
       this.updatePriceInfo();
       this.updateIndicatorsAndContext(this.candles);
@@ -711,32 +1174,77 @@ export class GraficosComponent implements OnInit, OnDestroy, AfterViewInit {
       setTimeout(() => this.initCharts(), 150);
       this.startLivePolling(symbol);
       this.loadOrderBook(symbol);
-      // Refrescar en background sin bloquear la UI
-      this.refreshHistoryInBackground(symbol);
+      // Sync BVC history in background, then refresh chart with new data
+      this._syncBvcHistoryBackground(symbol);
       return;
     }
 
-    this.loading = true;
-    this.cd.detectChanges();
+    // ── No cache: destroy old chart first, then paint socket candle if available
+    this.destroyAll();
+    if (socketToday) {
+      this.candles = [socketToday];
+      this.loading = false;
+      this.cd.detectChanges();
+      setTimeout(() => this.initCharts(), 100);
+      this.startLivePolling(symbol);
+    } else {
+      this.loading = true;
+      this.candles = [];
+      this.cd.detectChanges();
+    }
 
+    // Call BVC sync endpoint so missing candles are inserted before charting
+    this.http.post<any>(
+      this.apiUrl + '/stocks/bvc/' + symbol + '/sync-bvc-history',
+      {},
+      { headers: this.hdr() }
+    ).subscribe({
+      next: (d: any) => {
+        if (this.selectedSymbol !== symbol) return;
+        const synced = d.candles || [];
+        if (synced.length > 0) {
+          this.candles = synced;
+          this.setCachedHistory(symbol, this.candles);
+          this.updatePriceInfo();
+          this.updateIndicatorsAndContext(this.candles);
+          this.updateAdvancedIndicators(this.candles);
+          this.showAnalytics = false;
+          this.loading = false;
+          this.cd.detectChanges();
+          setTimeout(() => this.initCharts(), 50);
+          this.startLivePolling(symbol);
+          this.loadOrderBook(symbol);
+        } else {
+          // Fallback to regular history if sync returns empty
+          this._loadHistoryFallback(symbol);
+        }
+      },
+      error: () => {
+        // Fallback gracefully
+        if (this.selectedSymbol !== symbol) return;
+        this._loadHistoryFallback(symbol);
+      }
+    });
+  }
+
+  private _loadHistoryFallback(symbol: string): void {
     this.http.get<any>(this.apiUrl + '/stocks/bvc/' + symbol + '/history', { headers: this.hdr() }).subscribe({
       next: (d: any) => {
+        if (this.selectedSymbol !== symbol) return;
         this.candles = d.candles || [];
         this.setCachedHistory(symbol, this.candles);
         this.updatePriceInfo();
         this.updateIndicatorsAndContext(this.candles);
         this.updateAdvancedIndicators(this.candles);
         this.showAnalytics = false;
-
         this.loading = false;
         this.cd.detectChanges();
-        setTimeout(() => this.initCharts(), 150);
+        setTimeout(() => this.initCharts(), 50);
         this.startLivePolling(symbol);
-
-        // ✅ Cargar libro de órdenes en paralelo y almacenarlo para la IA
         this.loadOrderBook(symbol);
       },
       error: (e: any) => {
+        if (this.selectedSymbol !== symbol) return;
         console.error('❌ Error cargando historial:', e);
         this.loading = false;
         this.cd.detectChanges();
@@ -765,6 +1273,28 @@ export class GraficosComponent implements OnInit, OnDestroy, AfterViewInit {
     });
   }
 
+  private _syncBvcHistoryBackground(symbol: string): void {
+    this.http.post<any>(
+      this.apiUrl + '/stocks/bvc/' + symbol + '/sync-bvc-history',
+      {},
+      { headers: this.hdr() }
+    ).subscribe({
+      next: (d: any) => {
+        const synced = d.candles || [];
+        if (synced.length > 0 && this.selectedSymbol === symbol) {
+          this.setCachedHistory(symbol, synced);
+          this.candles = synced;
+          this.updatePriceInfo();
+          this.updateIndicatorsAndContext(this.candles);
+          this.updateAdvancedIndicators(this.candles);
+          this.cd.detectChanges();
+          setTimeout(() => this.initCharts(), 150);
+        }
+      },
+      error: () => {}
+    });
+  }
+
   // ✅ NUEVO: cargar libro de órdenes y almacenar para la IA
   private loadOrderBook(symbol: string) {
     this.http.get<{ symbol: string; entries: any[] }>(
@@ -772,6 +1302,7 @@ export class GraficosComponent implements OnInit, OnDestroy, AfterViewInit {
       { headers: this.hdr() }
     ).subscribe({
       next: (res) => {
+        if (this.selectedSymbol !== symbol) return; // Evitar carrera de red
         this.currentOrderBook = res.entries || [];
         // Actualizar contexto del chat si está abierto
         if (this.aiPanelOpen) {
@@ -780,6 +1311,7 @@ export class GraficosComponent implements OnInit, OnDestroy, AfterViewInit {
         }
       },
       error: (e) => {
+        if (this.selectedSymbol !== symbol) return;
         console.warn(`⚠️ No se pudo cargar el libro de ${symbol}:`, e);
         this.currentOrderBook = [];
       }
@@ -831,7 +1363,7 @@ export class GraficosComponent implements OnInit, OnDestroy, AfterViewInit {
 
     const h = Math.max(
       window.innerHeight - headerH - vH - rH - mH - obvH - aroonH - stochH,
-      200
+      350
     );
 
     const el    = this.chartEl?.nativeElement;
@@ -969,6 +1501,8 @@ export class GraficosComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private refreshOverlays(data: Candle[]) {
     if (!this.lwc) return;
+    // Pattern markers re-detect on every overlay refresh so they stay in sync with the visible TF
+    this.applyPatternMarkers(data);
     const cl = data.map(c => c.close), tm = data.map(c => c.time);
 
     const simple: Record<string, () => any[]> = {
@@ -979,11 +1513,11 @@ export class GraficosComponent implements OnInit, OnDestroy, AfterViewInit {
       vwap:   () => this.vwap(data),
     };
     const styles: Record<string, any> = {
-      ema20:  { color:'#f0883e', lineWidth:1, title:'EMA20',  priceLineVisible:false, lastValueVisible:false },
-      ema50:  { color:'#3fb950', lineWidth:1, title:'EMA50',  priceLineVisible:false, lastValueVisible:false },
-      ema200: { color:'#ff7b72', lineWidth:1, title:'EMA200', priceLineVisible:false, lastValueVisible:false },
-      sma20:  { color:'#d2a8ff', lineWidth:1, lineStyle:2, title:'SMA20', priceLineVisible:false, lastValueVisible:false },
-      vwap:   { color:'#ffa657', lineWidth:1, lineStyle:2, title:'VWAP',  priceLineVisible:false, lastValueVisible:false },
+      ema20:  { color:'#f0883e', lineWidth:1, title:'EMA20',  priceLineVisible:false, lastValueVisible:false, autoscaleInfoProvider: () => null },
+      ema50:  { color:'#3fb950', lineWidth:1, title:'EMA50',  priceLineVisible:false, lastValueVisible:false, autoscaleInfoProvider: () => null },
+      ema200: { color:'#ff7b72', lineWidth:1, title:'EMA200', priceLineVisible:false, lastValueVisible:false, autoscaleInfoProvider: () => null },
+      sma20:  { color:'#d2a8ff', lineWidth:1, lineStyle:2, title:'SMA20', priceLineVisible:false, lastValueVisible:false, autoscaleInfoProvider: () => null },
+      vwap:   { color:'#ffa657', lineWidth:1, lineStyle:2, title:'VWAP',  priceLineVisible:false, lastValueVisible:false, autoscaleInfoProvider: () => null },
     };
 
     for (const id of Object.keys(simple)) {
@@ -1001,9 +1535,9 @@ export class GraficosComponent implements OnInit, OnDestroy, AfterViewInit {
     if (bbOn) {
       const bb = this.bb(cl, tm, 20, 2);
       if (!this.overlays['bb_u']) {
-        this.overlays['bb_u'] = this.lwc.addLineSeries({ color:'rgba(121,192,255,.75)', lineWidth:1, title:'BB+', priceLineVisible:false, lastValueVisible:false });
-        this.overlays['bb_m'] = this.lwc.addLineSeries({ color:'rgba(121,192,255,.35)', lineWidth:1, lineStyle:2, title:'BB', priceLineVisible:false, lastValueVisible:false });
-        this.overlays['bb_l'] = this.lwc.addLineSeries({ color:'rgba(121,192,255,.75)', lineWidth:1, title:'BB−', priceLineVisible:false, lastValueVisible:false });
+        this.overlays['bb_u'] = this.lwc.addLineSeries({ color:'rgba(121,192,255,.75)', lineWidth:1, title:'BB+', priceLineVisible:false, lastValueVisible:false, autoscaleInfoProvider: () => null });
+        this.overlays['bb_m'] = this.lwc.addLineSeries({ color:'rgba(121,192,255,.35)', lineWidth:1, lineStyle:2, title:'BB', priceLineVisible:false, lastValueVisible:false, autoscaleInfoProvider: () => null });
+        this.overlays['bb_l'] = this.lwc.addLineSeries({ color:'rgba(121,192,255,.75)', lineWidth:1, title:'BB−', priceLineVisible:false, lastValueVisible:false, autoscaleInfoProvider: () => null });
       }
       this.overlays['bb_u'].setData(bb.upper);
       this.overlays['bb_m'].setData(bb.middle);
@@ -1019,11 +1553,11 @@ export class GraficosComponent implements OnInit, OnDestroy, AfterViewInit {
     if (ichiOn) {
       const ichi = this.calcIchimoku(data);
       const ks: Record<string, any> = {
-        ichi_t:  { color:'rgba(38,166,65,.9)',   lineWidth:1, title:'Tenkan',  priceLineVisible:false, lastValueVisible:false },
-        ichi_k:  { color:'rgba(248,81,73,.9)',   lineWidth:1, title:'Kijun',   priceLineVisible:false, lastValueVisible:false },
-        ichi_a:  { color:'rgba(38,166,65,.3)',   lineWidth:1, title:'SpanA',   priceLineVisible:false, lastValueVisible:false },
-        ichi_b:  { color:'rgba(248,81,73,.3)',   lineWidth:1, title:'SpanB',   priceLineVisible:false, lastValueVisible:false },
-        ichi_ch: { color:'rgba(102,170,255,.6)', lineWidth:1, title:'Chikou',  priceLineVisible:false, lastValueVisible:false },
+        ichi_t:  { color:'rgba(38,166,65,.9)',   lineWidth:1, title:'Tenkan',  priceLineVisible:false, lastValueVisible:false, autoscaleInfoProvider: () => null },
+        ichi_k:  { color:'rgba(248,81,73,.9)',   lineWidth:1, title:'Kijun',   priceLineVisible:false, lastValueVisible:false, autoscaleInfoProvider: () => null },
+        ichi_a:  { color:'rgba(38,166,65,.3)',   lineWidth:1, title:'SpanA',   priceLineVisible:false, lastValueVisible:false, autoscaleInfoProvider: () => null },
+        ichi_b:  { color:'rgba(248,81,73,.3)',   lineWidth:1, title:'SpanB',   priceLineVisible:false, lastValueVisible:false, autoscaleInfoProvider: () => null },
+        ichi_ch: { color:'rgba(102,170,255,.6)', lineWidth:1, title:'Chikou',  priceLineVisible:false, lastValueVisible:false, autoscaleInfoProvider: () => null },
       };
       const ichiData: Record<string, any[]> = {
         ichi_t: ichi.tenkan, ichi_k: ichi.kijun,
@@ -1153,6 +1687,36 @@ export class GraficosComponent implements OnInit, OnDestroy, AfterViewInit {
     return (atr / price) * 100;
   }
 
+  // --- ADR% (Average Daily Range over last 20 sessions)
+  private calcAdr(candles: Candle[], period = 20): { adr: number; usedPct: number } {
+    if (candles.length < 2) return { adr: 0, usedPct: 0 };
+    const slice = candles.slice(-period);
+    const ranges = slice.map(c => c.low > 0 ? ((c.high - c.low) / c.low) * 100 : 0);
+    const adr = ranges.reduce((a, b) => a + b, 0) / ranges.length;
+    const last = candles[candles.length - 1];
+    const todayRange = last.low > 0 ? ((last.high - last.low) / last.low) * 100 : 0;
+    const usedPct = adr > 0 ? Math.min(200, (todayRange / adr) * 100) : 0;
+    return { adr: parseFloat(adr.toFixed(3)), usedPct: parseFloat(usedPct.toFixed(1)) };
+  }
+
+  // --- BBW (Bollinger Band Width)
+  private calcBbw(candles: Candle[], period = 20, mult = 2): { width: number; trend: 'contracting' | 'expanding' | 'neutral' } {
+    const computeWidth = (slice: Candle[]): number => {
+      if (slice.length < period) return 0;
+      const closes = slice.map(c => c.close);
+      const sma = closes.slice(-period).reduce((a, b) => a + b, 0) / period;
+      const variance = closes.slice(-period).reduce((a, b) => a + (b - sma) ** 2, 0) / period;
+      const std = Math.sqrt(variance);
+      return sma > 0 ? (mult * 2 * std / sma) * 100 : 0;
+    };
+    const current  = computeWidth(candles);
+    const previous = computeWidth(candles.slice(0, -1));
+    const delta    = current - previous;
+    const trend: 'contracting' | 'expanding' | 'neutral' =
+      Math.abs(delta) < 0.01 ? 'neutral' : delta < 0 ? 'contracting' : 'expanding';
+    return { width: parseFloat(current.toFixed(3)), trend };
+  }
+
   // --- DMI
   private dmi(candles: Candle[], basePeriod: number = 14): number {
     if (candles.length < basePeriod + 5) return 50;
@@ -1196,6 +1760,202 @@ export class GraficosComponent implements OnInit, OnDestroy, AfterViewInit {
     return 100 - (100 / (1 + ratio));
   }
 
+  // ── Market Regime — Multi-Timeframe Gaussian HMM (4 states) ─────────────
+  // Uses returns from 3 windows (5d/20d/60d) + volume trend + volatility regime
+  // scoring via Gaussian emission likelihoods to classify the dominant state.
+  private calcMarketRegime(candles: Candle[]): 'alcista' | 'bajista' | 'lateral' | 'volatil' {
+    const n = Math.min(candles.length, 60);
+    if (n < 10) return 'lateral';
+    const slice   = candles.slice(-n);
+    const returns = slice.slice(1).map((c, i) => (c.close - slice[i].close) / (slice[i].close || 1));
+    if (!returns.length) return 'lateral';
+
+    // Rolling volatility at multiple windows
+    const vol5  = this._rollingStd(returns, 5)  * Math.sqrt(252) * 100;
+    const vol20 = this._rollingStd(returns, 20) * Math.sqrt(252) * 100;
+
+    // Regime: high-volatility override (Gaussian tail — σ > 1.8× baseline)
+    if (vol5 > 60 || (vol5 > 40 && vol5 / (vol20 || 1) > 1.8)) return 'volatil';
+
+    // Multi-timeframe trend scores
+    const trend5  = returns.slice(-5).reduce((a, b) => a + b, 0)  * 100 / 5;
+    const last20  = slice[Math.max(0, slice.length - 20)].close;
+    const trend20 = (slice[slice.length - 1].close - last20) / (last20 || 1) * 100;
+    const trend60 = (slice[slice.length - 1].close - slice[0].close) / (slice[0].close || 1) * 100;
+
+    // Volume participation (is volume backing the move?)
+    const avgVol10 = slice.slice(-10).reduce((a, c) => a + c.volume, 0) / 10;
+    const avgVol30 = slice.slice(-Math.min(30, n)).reduce((a, c) => a + c.volume, 0) / Math.min(30, n);
+    const volPart  = avgVol30 > 0 ? avgVol10 / avgVol30 : 1;
+
+    // Gaussian-inspired scoring: weight each timeframe by its reliability
+    // Short (5d) = 0.25, Mid (20d) = 0.50, Long (60d) = 0.25
+    const weightedTrend = trend5 * 0.25 + trend20 * 0.50 + trend60 * 0.25;
+
+    // Trend-confirmation threshold adjusted for volume participation
+    const threshold = volPart > 1.2 ? 1.5 : 2.5; // lower bar when volume confirms
+
+    if (weightedTrend >  threshold) return 'alcista';
+    if (weightedTrend < -threshold) return 'bajista';
+    return 'lateral';
+  }
+
+  private _rollingStd(arr: number[], window: number): number {
+    const s = arr.slice(-Math.min(window, arr.length));
+    if (s.length < 2) return 0;
+    const m = s.reduce((a, b) => a + b, 0) / s.length;
+    return Math.sqrt(s.reduce((a, b) => a + (b - m) ** 2, 0) / s.length);
+  }
+
+  // ── CVD — Cumulative Volume Delta (aggressive buy − sell via OHLCV proxy) ─
+  private calcCvd(candles: Candle[]): { cumulative: number; lastDelta: number } {
+    let cumDelta = 0, lastDelta = 0;
+    for (const c of candles) {
+      const range  = c.high - c.low;
+      // Williams' buy/sell volume estimator from OHLCV (used when tick data unavailable)
+      const buyVol = range > 0 ? c.volume * (c.close - c.low) / range : c.volume * 0.5;
+      const delta  = buyVol * 2 - c.volume; // net delta = buyVol - sellVol
+      cumDelta  += delta;
+      lastDelta  = delta;
+    }
+    return { cumulative: parseFloat(cumDelta.toFixed(0)), lastDelta: parseFloat(lastDelta.toFixed(0)) };
+  }
+
+  // ── Volume Profile — POC / HVN / LVN via price-bucketed volume histogram ──
+  private calcVolumeProfile(candles: Candle[], bins = 40): {
+    hvn: number; lvn: number; poc: number;
+    levels: { price: number; volume: number; pct: number }[];
+  } {
+    if (candles.length < 5) return { hvn: 0, lvn: 0, poc: 0, levels: [] };
+    const priceMin = Math.min(...candles.map(c => c.low));
+    const priceMax = Math.max(...candles.map(c => c.high));
+    const range    = priceMax - priceMin;
+    if (range < 1e-10) return { hvn: 0, lvn: 0, poc: 0, levels: [] };
+
+    const bucketSize = range / bins;
+    const volumes    = new Array(bins).fill(0);
+
+    for (const c of candles) {
+      const candleRange = c.high - c.low;
+      for (let b = 0; b < bins; b++) {
+        const bLow  = priceMin + b * bucketSize;
+        const bHigh = bLow + bucketSize;
+        if (candleRange > 0) {
+          const overlap = Math.min(c.high, bHigh) - Math.max(c.low, bLow);
+          if (overlap > 0) volumes[b] += c.volume * (overlap / candleRange);
+        } else if (c.close >= bLow && c.close < bHigh) {
+          volumes[b] += c.volume;
+        }
+      }
+    }
+
+    const maxVol = Math.max(...volumes);
+    if (maxVol === 0) return { hvn: 0, lvn: 0, poc: 0, levels: [] };
+
+    const pocIdx = volumes.indexOf(maxVol);
+    const poc    = priceMin + pocIdx * bucketSize + bucketSize / 2;
+
+    // LVN: lowest-volume bucket in the inner 80% of the range (avoid extremes)
+    const innerStart = Math.floor(bins * 0.1);
+    const innerEnd   = Math.ceil(bins * 0.9);
+    let lvnIdx = innerStart;
+    let minVol = volumes[innerStart];
+    for (let i = innerStart + 1; i < innerEnd; i++) {
+      if (volumes[i] < minVol) { minVol = volumes[i]; lvnIdx = i; }
+    }
+    const lvn = priceMin + lvnIdx * bucketSize + bucketSize / 2;
+
+    const levels = volumes.map((vol, i) => ({
+      price:  parseFloat((priceMin + i * bucketSize + bucketSize / 2).toFixed(4)),
+      volume: parseFloat(vol.toFixed(0)),
+      pct:    parseFloat((vol / maxVol).toFixed(3))
+    }));
+
+    return { hvn: parseFloat(poc.toFixed(4)), lvn: parseFloat(lvn.toFixed(4)), poc: parseFloat(poc.toFixed(4)), levels };
+  }
+
+  // ── Price Percentile — where current price sits in its 252-day distribution
+  private calcPricePercentile(candles: Candle[], period = 252): number {
+    if (candles.length < 5) return 50;
+    const closes  = candles.slice(-Math.min(period, candles.length)).map(c => c.close);
+    const current = closes[closes.length - 1];
+    const rank    = closes.filter(p => p <= current).length;
+    return Math.round(rank / closes.length * 100);
+  }
+
+  // ── Value Zone (CAPE proxy) — price Z-score vs 1-year mean ───────────────
+  // In the absence of earnings data, uses price deviation from its long-run
+  // mean as a cyclically-adjusted valuation signal (akin to Buffett's Price/MA).
+  private calcValueZone(candles: Candle[], period = 252): { score: number; label: string } {
+    const n = Math.min(period, candles.length);
+    if (n < 20) return { score: 0, label: 'Sin datos' };
+    const closes = candles.slice(-n).map(c => c.close);
+    const mean   = closes.reduce((a, b) => a + b, 0) / closes.length;
+    const std    = Math.sqrt(closes.reduce((a, b) => a + (b - mean) ** 2, 0) / closes.length);
+    const z      = std > 0 ? (closes[closes.length - 1] - mean) / std : 0;
+    let label: string;
+    if      (z >  2)   label = 'BURBUJA';
+    else if (z >  1)   label = 'CARA';
+    else if (z > -1)   label = 'NEUTRAL';
+    else if (z > -2)   label = 'BARATA';
+    else               label = 'HIST. MÍN.';
+    return { score: parseFloat(z.toFixed(2)), label };
+  }
+
+  // ── Half-Kelly Criterion ──────────────────────────────────────────────────
+  private calcKelly(candles: Candle[], period = 60): number {
+    const n = Math.min(candles.length, period);
+    if (n < 10) return 0;
+    const slice   = candles.slice(-n);
+    const returns = slice.slice(1).map((c, i) => (c.close - slice[i].close) / (slice[i].close || 1));
+    const wins    = returns.filter(r => r > 0);
+    const losses  = returns.filter(r => r < 0);
+    if (!wins.length || !losses.length) return 0;
+    const p    = wins.length / returns.length;
+    const avgW = wins.reduce((a, b) => a + b, 0) / wins.length;
+    const avgL = Math.abs(losses.reduce((a, b) => a + b, 0) / losses.length);
+    const b    = avgW / avgL;
+    const kelly = (p * b - (1 - p)) / b;
+    return Math.max(0, Math.min(1, kelly / 2));  // half-Kelly, clamped 0-1
+  }
+
+  // ── Rolling Auto-Correlation (lag-1) ─────────────────────────────────────
+  private calcAutoCorr(candles: Candle[], period = 30): number {
+    const n = Math.min(candles.length, period + 1);
+    if (n < 10) return 0;
+    const slice   = candles.slice(-n);
+    const returns = slice.slice(1).map((c, i) => (c.close - slice[i].close) / (slice[i].close || 1));
+    if (returns.length < 4) return 0;
+    const x = returns.slice(0, -1);
+    const y = returns.slice(1);
+    const mx = x.reduce((a, b) => a + b, 0) / x.length;
+    const my = y.reduce((a, b) => a + b, 0) / y.length;
+    const num = x.reduce((a, v, i) => a + (v - mx) * (y[i] - my), 0);
+    const dx  = Math.sqrt(x.reduce((a, v) => a + (v - mx) ** 2, 0));
+    const dy  = Math.sqrt(y.reduce((a, v) => a + (v - my) ** 2, 0));
+    return (dx * dy) > 0 ? parseFloat((num / (dx * dy)).toFixed(3)) : 0;
+  }
+
+  // ── Liquidity Z-Score (Volume vs 20d avg) ────────────────────────────────
+  private calcLiquidityZ(candles: Candle[], period = 20): number {
+    if (candles.length < period + 1) return 0;
+    const slice  = candles.slice(-(period + 1));
+    const hist   = slice.slice(0, -1).map(c => c.volume);
+    const today  = slice[slice.length - 1].volume;
+    const avg    = hist.reduce((a, b) => a + b, 0) / hist.length;
+    const std    = Math.sqrt(hist.reduce((a, b) => a + (b - avg) ** 2, 0) / hist.length);
+    return std > 0 ? parseFloat(((today - avg) / std).toFixed(2)) : 0;
+  }
+
+  // ── Momentum Score / Smart Beta proxy (rate of change vs 20d SMA) ────────
+  private calcMomentum(candles: Candle[], period = 20): number {
+    if (candles.length < period + 1) return 0;
+    const slice = candles.slice(-(period + 1));
+    const sma   = slice.slice(0, -1).map(c => c.close).reduce((a, b) => a + b, 0) / period;
+    const last  = slice[slice.length - 1].close;
+    return sma > 0 ? parseFloat(((last - sma) / sma * 100).toFixed(2)) : 0;
+  }
+
   // ── RSI sub-chart ─────────────────────────────────────────────────────────
 
   private mkRsi(data: Candle[]) {
@@ -1218,7 +1978,8 @@ export class GraficosComponent implements OnInit, OnDestroy, AfterViewInit {
       color:'#a371f7', lineWidth:2, title:'RSI',
       priceLineVisible:false, lastValueVisible:true,
     });
-    this.rsiSeries.setData(rsiData);
+    const pad = data.slice(0, data.length - rsiData.length).map((c: any) => ({ time: c.time }));
+    this.rsiSeries.setData([...pad, ...rsiData]);
     this.rsiSeries.createPriceLine({ price:70, color:'rgba(248,81,73,.5)',  lineWidth:1, lineStyle:3, axisLabelVisible:true,  title:'70' });
     this.rsiSeries.createPriceLine({ price:50, color:'rgba(139,148,158,.2)', lineWidth:1, lineStyle:3, axisLabelVisible:false, title:'' });
     this.rsiSeries.createPriceLine({ price:30, color:'rgba(38,166,65,.5)',   lineWidth:1, lineStyle:3, axisLabelVisible:true,  title:'30' });
@@ -1249,9 +2010,12 @@ export class GraficosComponent implements OnInit, OnDestroy, AfterViewInit {
     this.macdHist = this.lwcMacd.addHistogramSeries({ title:'Hist', priceLineVisible:false });
     this.macdFast = this.lwcMacd.addLineSeries({ color:'#58a6ff', lineWidth:1, title:'MACD',   priceLineVisible:false, lastValueVisible:true });
     this.macdSlow = this.lwcMacd.addLineSeries({ color:'#f0883e', lineWidth:1, title:'Signal', priceLineVisible:false, lastValueVisible:true });
-    this.macdHist.setData(macd.histogram);
-    this.macdFast.setData(macd.macdLine);
-    this.macdSlow.setData(macd.signalLine);
+    const padH = data.slice(0, data.length - macd.histogram.length).map((c: any) => ({ time: c.time }));
+    this.macdHist.setData([...padH, ...macd.histogram]);
+    const padM = data.slice(0, data.length - macd.macdLine.length).map((c: any) => ({ time: c.time }));
+    this.macdFast.setData([...padM, ...macd.macdLine]);
+    const padS = data.slice(0, data.length - macd.signalLine.length).map((c: any) => ({ time: c.time }));
+    this.macdSlow.setData([...padS, ...macd.signalLine]);
     this.lwcMacd.timeScale().fitContent();
     this.sync();
     setTimeout(() => this.alignTimeScales(), 50);
@@ -1277,14 +2041,17 @@ export class GraficosComponent implements OnInit, OnDestroy, AfterViewInit {
       this.obvSeries = this.lwcObv.addLineSeries({
         color:'#ffaa66', lineWidth:1, title:'OBV', priceLineVisible:false, lastValueVisible:true,
       });
-      this.obvSeries.setData(this.calcObvSeries(data));
+      const obv = this.calcObvSeries(data);
+      const padO = data.slice(0, data.length - obv.length).map((c: any) => ({ time: c.time }));
+      this.obvSeries.setData([...padO, ...obv]);
     }
     if (this.indEnabled('adl')) {
       this.adlChartSeries = this.lwcObv.addLineSeries({
         color:'#66ffaa', lineWidth:1, title:'A/D', priceLineVisible:false, lastValueVisible:true,
       });
       const adlData = this.adlSeriesArr(data).map((v, i) => ({ time: data[i].time, value: v }));
-      this.adlChartSeries.setData(adlData);
+      const padA = data.slice(0, data.length - adlData.length).map((c: any) => ({ time: c.time }));
+      this.adlChartSeries.setData([...padA, ...adlData]);
     }
     this.lwcObv.timeScale().fitContent();
     this.sync();
@@ -1337,8 +2104,9 @@ export class GraficosComponent implements OnInit, OnDestroy, AfterViewInit {
     this.aroonDownSeries = this.lwcAroon.addLineSeries({
       color:'#f85149', lineWidth:1, title:'Aroon Down', priceLineVisible:false, lastValueVisible:true,
     });
-    this.aroonUpSeries.setData(aroonUpData);
-    this.aroonDownSeries.setData(aroonDownData);
+    const pad = data.slice(0, data.length - aroonUpData.length).map((c: any) => ({ time: c.time }));
+    this.aroonUpSeries.setData([...pad, ...aroonUpData]);
+    this.aroonDownSeries.setData([...pad, ...aroonDownData]);
     this.aroonUpSeries.createPriceLine({ price:70, color:'rgba(38,166,65,.3)',   lineWidth:1, lineStyle:3, axisLabelVisible:true,  title:'70' });
     this.aroonUpSeries.createPriceLine({ price:50, color:'rgba(139,148,158,.2)', lineWidth:1, lineStyle:3, axisLabelVisible:false, title:'' });
     this.aroonUpSeries.createPriceLine({ price:30, color:'rgba(248,81,73,.3)',   lineWidth:1, lineStyle:3, axisLabelVisible:true,  title:'30' });
@@ -1384,8 +2152,10 @@ export class GraficosComponent implements OnInit, OnDestroy, AfterViewInit {
     this.stochDSeries = this.lwcStoch.addLineSeries({
       color:'#66ccff', lineWidth:1, title:'%D', priceLineVisible:false, lastValueVisible:true,
     });
-    this.stochKSeries.setData(kRaw);
-    this.stochDSeries.setData(dData);
+    const padK = data.slice(0, data.length - kRaw.length).map((c: any) => ({ time: c.time }));
+    this.stochKSeries.setData([...padK, ...kRaw]);
+    const padD = data.slice(0, data.length - dData.length).map((c: any) => ({ time: c.time }));
+    this.stochDSeries.setData([...padD, ...dData]);
     this.stochKSeries.createPriceLine({ price:80, color:'rgba(248,81,73,.4)',  lineWidth:1, lineStyle:3, axisLabelVisible:true,  title:'80' });
     this.stochKSeries.createPriceLine({ price:50, color:'rgba(139,148,158,.2)', lineWidth:1, lineStyle:3, axisLabelVisible:false, title:'' });
     this.stochKSeries.createPriceLine({ price:20, color:'rgba(38,166,65,.4)',  lineWidth:1, lineStyle:3, axisLabelVisible:true,  title:'20' });
@@ -1424,8 +2194,7 @@ export class GraficosComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private ema(v: number[], t: string[], p: number): any[] {
     const k = 2 / (p + 1); const r: any[] = []; let e = 0;
-    for (let i = 0; i < v.length; i++) {
-      if (i < p - 1) continue;
+    for (let i = p - 1; i < v.length; i++) {
       e = i === p - 1 ? v.slice(0, p).reduce((a, b) => a + b, 0) / p : v[i] * k + e * (1 - k);
       r.push({ time:t[i], value:parseFloat(e.toFixed(4)) });
     }
@@ -1468,11 +2237,10 @@ export class GraficosComponent implements OnInit, OnDestroy, AfterViewInit {
         sig = i === 8 ? sig : d.value * k + sig * (1 - k);
         sl.push({ time:d.time, value:parseFloat(sig.toFixed(4)) });
         const h = d.value - sig;
-        hl.push({ time:d.time, value:parseFloat(h.toFixed(4)),
-          color: h >= 0 ? 'rgba(38,166,65,.7)' : 'rgba(248,81,73,.7)' });
+        hl.push({ time:d.time, value:parseFloat(h.toFixed(4)), color: h >= 0 ? 'rgba(38,166,65,.7)' : 'rgba(248,81,73,.7)' });
       }
     });
-    return { macdLine:ml, signalLine:sl, histogram:hl };
+    return { macdLine: ml, signalLine: sl, histogram: hl };
   }
 
   private bb(v: number[], t: string[], p: number, s: number) {
@@ -1637,7 +2405,7 @@ export class GraficosComponent implements OnInit, OnDestroy, AfterViewInit {
   clearDrawings() {
     if (this.series && this.lwc) {
       try {
-        const raw = this.filterTF(this.candles);
+        const raw = this.filterTF(this.displayCandles);
         this.lwc.removeSeries(this.series);
         this.series = this.mkSeries(this.LWC());
         this.setData(raw);
@@ -1657,14 +2425,32 @@ export class GraficosComponent implements OnInit, OnDestroy, AfterViewInit {
   toggleIndicator(ind: Indicator) {
     ind.enabled = !ind.enabled;
     if (!this.candles.length || !this.lwc) return;
-    const data = this.filterTF(this.candles);
+    const data = this.filterTF(this.displayCandles);
     const subChartIds = ['rsi','macd','obv','adl','aroon','stoch'];
     if (subChartIds.includes(ind.id)) {
       this.cd.detectChanges();
       setTimeout(() => this.initCharts(), 60);
       return;
     }
+    if (ind.id === 'patterns') {
+      this.applyPatternMarkers(data);
+      return;
+    }
     this.refreshOverlays(data);
+  }
+
+  /** Detects classic candlestick patterns and paints markers on the candle series. */
+  private applyPatternMarkers(data: Candle[]) {
+    if (!this.series) return;
+    if (!this.indEnabled('patterns')) {
+      this.detectedPatterns = [];
+      try { this.series.setMarkers([]); } catch {}
+      this.cd.detectChanges();
+      return;
+    }
+    this.detectedPatterns = detectPatterns(data);
+    try { this.series.setMarkers(patternsToMarkers(this.detectedPatterns)); } catch {}
+    this.cd.detectChanges();
   }
 
   indEnabled(id: string): boolean {
@@ -1679,18 +2465,19 @@ export class GraficosComponent implements OnInit, OnDestroy, AfterViewInit {
   setTimeframe(tf: string) {
     this.currentTF = tf;
     if (!this.candles.length || !this.series) return;
-    const filtered = this.filterCandlesByTF(this.candles);
-    this.updateIndicatorsAndContext(filtered);
-    this.updateAdvancedIndicators(filtered);
-    this.setData(filtered);
-    this.refreshOverlays(filtered);
-    if (this.indicators[0]?.enabled) this.mkRsi(filtered);
-    if (this.indicators[1]?.enabled) this.mkMacd(filtered);
-    if (this.indEnabled('obv') || this.indEnabled('adl')) this.mkObv(filtered);
-    if (this.indEnabled('aroon')) this.mkAroon(filtered);
-    if (this.indEnabled('stoch')) this.mkStoch(filtered);
+    const rawFiltered     = this.filterCandlesByTF(this.candles);
+    const displayFiltered = this.filterCandlesByTF(this.displayCandles);
+    this.updateIndicatorsAndContext(rawFiltered);
+    this.updateAdvancedIndicators(rawFiltered);
+    this.setData(displayFiltered);
+    this.refreshOverlays(displayFiltered);
+    if (this.indicators[0]?.enabled) this.mkRsi(displayFiltered);
+    if (this.indicators[1]?.enabled) this.mkMacd(displayFiltered);
+    if (this.indEnabled('obv') || this.indEnabled('adl')) this.mkObv(displayFiltered);
+    if (this.indEnabled('aroon')) this.mkAroon(displayFiltered);
+    if (this.indEnabled('stoch')) this.mkStoch(displayFiltered);
     if (this.volumeSeries) {
-      this.volumeSeries.setData(filtered.map(c => ({
+      this.volumeSeries.setData(displayFiltered.map(c => ({
         time:c.time, value:c.volume,
         color: c.close >= c.open ? 'rgba(38,166,65,.5)' : 'rgba(248,81,73,.5)'
       })));
@@ -1756,7 +2543,8 @@ onFullscreenChange(event?: Event) {   // ✅ parámetro opcional
     for (let i = dates.length - 1; i >= 0; i--) {
       if (dates[i] <= date) return this.bcvRates[dates[i]];
     }
-    return 0;
+    // Date predates all available rates → use oldest rate to avoid raw-Bs mixing
+    return dates.length > 0 ? this.bcvRates[dates[0]] : 0;
   }
 
   get displayCandles(): Candle[] {
@@ -1853,30 +2641,42 @@ private convertContextToUsd(context: ChartContextInput | null): ChartContextInpu
 
   private filterTF(cs: Candle[]): Candle[] { return this.filterCandlesByTF(cs); }
 
+  private syncHandlers: { ch: any; handler: any }[] = [];
+
   private sync() {
     const charts = [this.lwc, this.volumeChart, this.lwcRsi, this.lwcMacd, this.lwcObv, this.lwcAroon, this.lwcStoch].filter(Boolean);
     if (!charts.length) return;
 
-    this.chartSubscriptions.forEach(unsub => { try { unsub(); } catch {} });
-    this.chartSubscriptions = [];
+    this.syncHandlers.forEach(({ ch, handler }) => {
+      try { ch.timeScale().unsubscribeVisibleLogicalRangeChange(handler); } catch {}
+    });
+    this.syncHandlers = [];
+
+    let isSyncing = false;
 
     charts.forEach((ch, i) => {
-      const unsubRange = ch.timeScale().subscribeVisibleLogicalRangeChange((r: any) => {
-        if (!r) return;
+      const handler = (r: any) => {
+        if (!r || isSyncing) return;
+        isSyncing = true;
         charts.forEach((o, j) => {
-          if (i !== j) { try { o.timeScale().setVisibleLogicalRange(r); } catch {} }
+          if (i !== j) {
+            try {
+              const old = o.timeScale().getVisibleLogicalRange();
+              if (!old || Math.abs(old.from - r.from) > 1e-4 || Math.abs(old.to - r.to) > 1e-4) {
+                 o.timeScale().setVisibleLogicalRange(r);
+              }
+            } catch {}
+          }
         });
-      });
-      const unsubTime = ch.timeScale().subscribeVisibleTimeRangeChange((r: any) => {
-        if (!r) return;
-        charts.forEach((o, j) => {
-          if (i !== j) { try { o.timeScale().setVisibleTimeRange(r); } catch {} }
-        });
-      });
-      this.chartSubscriptions.push(unsubRange, unsubTime);
+        setTimeout(() => { isSyncing = false; }, 20);
+      };
+      try {
+        ch.timeScale().subscribeVisibleLogicalRangeChange(handler);
+        this.syncHandlers.push({ ch, handler });
+      } catch {}
     });
 
-    setTimeout(() => { this.alignTimeScales(); }, 100);
+    setTimeout(() => { this.alignTimeScales(); }, 50);
   }
 
   private alignTimeScales() {
@@ -1892,7 +2692,6 @@ private convertContextToUsd(context: ChartContextInput | null): ChartContextInpu
         });
       }
     } catch {}
-    charts.forEach(ch => { try { ch.timeScale().fitContent(); } catch {} });
   }
 
   private updatePriceInfo() {
@@ -2163,6 +2962,16 @@ private convertContextToUsd(context: ChartContextInput | null): ChartContextInpu
         dmi:         adv.dmi         ?? null,
         stoch_k:     adv.stoch_k     ?? null,
         mfi:         adv.mfi         ?? null,
+
+        // ── Microstructure & Valuation ──────────────────────────────────────
+        cvd_cumulative:      this.cvdValue,
+        cvd_last_delta:      this.cvdDeltaLast,
+        cvd_trend:           this.cvdTrend,
+        vp_hvn:              this.vpHvn,
+        vp_lvn:              this.vpLvn,
+        price_percentile252: this.pricePercentile252,
+        value_zone_z:        this.valueZoneScore,
+        value_zone_label:    this.valueZoneLabel,
 
         // Historial
         lastCandles:   ind.lastCandles   ?? [],

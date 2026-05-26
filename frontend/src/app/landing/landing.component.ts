@@ -18,7 +18,7 @@ import { RouterLink } from '@angular/router';
           </a>
           <div class="nav-actions">
             <a class="btn-ghost" routerLink="/auth/login">Iniciar sesión</a>
-            <a class="btn-primary" routerLink="/auth/register">Crear cuenta gratis</a>
+            <a class="btn-primary" routerLink="/auth/register">Registrarse</a>
           </div>
         </div>
       </nav>
@@ -31,7 +31,11 @@ import { RouterLink } from '@angular/router';
           <div class="blob b3"></div>
         </div>
         <div class="hero-content">
-          <span class="hero-badge">🇻🇪 Plataforma #1 para la BVC</span>
+          <a class="hero-new-badge" routerLink="/release-notes">
+            <span class="new-tag">NUEVO</span>
+            Ver qué hay de nuevo en la v2.0
+            <span class="arrow">→</span>
+          </a>
           <h1 class="hero-title">
             Invierte con inteligencia en la<br>
             <span class="gradient-text">Bolsa de Valores de Caracas</span>
@@ -47,7 +51,7 @@ import { RouterLink } from '@angular/router';
             </a>
             <a class="btn-hero-ghost" routerLink="/auth/login">Ya tengo cuenta</a>
           </div>
-          <p class="hero-note">Sin tarjeta de crédito · Datos reales de la BVC · 100% gratuito</p>
+          <p class="hero-note">Datos reales de la BVC · 100% gratuito</p>
         </div>
       </header>
 
@@ -207,7 +211,7 @@ import { RouterLink } from '@angular/router';
             <div class="step">
               <div class="step-num">1</div>
               <h3>Crea tu cuenta gratis</h3>
-              <p>Regístrate en segundos. Sin tarjeta de crédito. Acceso inmediato a datos del mercado.</p>
+              <p>Regístrate en segundos. Acceso inmediato a datos del mercado.</p>
             </div>
             <div class="step-arrow">→</div>
             <div class="step">
@@ -317,16 +321,22 @@ import { RouterLink } from '@angular/router';
     .brand-icon { font-size: 1.5rem; }
     .brand-accent { color: var(--accent); }
 
-    .nav-actions { display: flex; align-items: center; gap: 12px; }
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
 
     .btn-ghost {
       color: var(--text-muted);
       text-decoration: none;
       font-size: 0.9rem;
       font-weight: 500;
-      padding: 8px 16px;
+      padding: 8px 14px;
       border-radius: 10px;
       transition: color 0.2s, background 0.2s;
+      white-space: nowrap;
     }
     .btn-ghost:hover { color: var(--text); background: var(--surface); }
 
@@ -336,11 +346,27 @@ import { RouterLink } from '@angular/router';
       text-decoration: none;
       font-size: 0.9rem;
       font-weight: 600;
-      padding: 9px 20px;
+      padding: 9px 16px;
       border-radius: 10px;
       transition: opacity 0.2s, transform 0.2s;
+      white-space: nowrap;
     }
     .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+
+    @media (max-width: 480px) {
+      .nav-inner { padding: 0 12px; gap: 8px; }
+      .brand { font-size: 1rem; gap: 6px; }
+      .brand-icon { font-size: 1.2rem; }
+      .nav-actions { gap: 6px; }
+      .btn-ghost { font-size: 0.75rem; padding: 6px 8px; }
+      .btn-primary { font-size: 0.75rem; padding: 6px 10px; }
+    }
+
+    @media (max-width: 360px) {
+      .brand { font-size: 0.9rem; }
+      .btn-ghost { font-size: 0.7rem; padding: 5px 6px; }
+      .btn-primary { font-size: 0.7rem; padding: 5px 8px; }
+    }
 
     /* ── HERO ────────────────────────────────────────────── */
     .hero {
@@ -388,6 +414,36 @@ import { RouterLink } from '@angular/router';
       font-weight: 600;
       margin-bottom: 28px;
       letter-spacing: 0.04em;
+    }
+
+    .hero-new-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(76,98,255,0.1);
+      border: 1px solid rgba(76,98,255,0.25);
+      padding: 8px 16px;
+      border-radius: 100px;
+      text-decoration: none;
+      color: #a5b4fc;
+      font-size: 0.88rem;
+      font-weight: 600;
+      margin-bottom: 24px;
+      transition: all 0.3s ease;
+    }
+    .hero-new-badge:hover {
+      background: rgba(76,98,255,0.2);
+      border-color: rgba(76,98,255,0.5);
+      transform: translateY(-2px);
+    }
+    .new-tag {
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: #fff;
+      font-size: 0.65rem;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 20px;
+      letter-spacing: 0.05em;
     }
 
     .hero-title {

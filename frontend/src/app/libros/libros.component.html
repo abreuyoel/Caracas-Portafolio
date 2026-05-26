@@ -1,62 +1,257 @@
-<!-- Mobile top bar -->
-<div class="mobile-topbar">
-  <a class="mobile-back-btn" routerLink="/dashboard">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
-  </a>
-  <span class="mobile-topbar-title">Libros de Órdenes</span>
-</div>
-
-<div class="libros-container">
-  <div class="libros-header">
-    <h1>Libros de Órdenes</h1>
-    <p>Selecciona una acción para ver sus niveles de compra y venta en tiempo real</p>
+<div class="market-feed-container">
+  
+  <!-- Back Button & Header -->
+  <div class="mf-topbar">
+    <button mat-icon-button (click)="goBack()" class="back-btn" matTooltip="Volver">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    
+    <div class="mf-brand">
+      <div class="mf-logo">BVC</div>
+      <h1>Market Feed <span class="mf-subtitle">— Terminal BVC Activa</span></h1>
+    </div>
+    
+    <div class="spacer"></div>
+    
+    <div class="mf-status-indicator" [class.connected]="marketStatus?.P_SIT_MERC !== 'DESCONECTADO' && (bvcSocket.isConnected$ | async)">
+      <div class="pulse"></div>
+      <span class="status-msg">{{ (bvcSocket.isConnected$ | async) ? (marketStatus?.P_SIT_MERC || 'CONECTANDO...') : 'DESCONECTADO' }}</span>
+    </div>
   </div>
 
-  @if (loading) {
-    <div class="loading-spinner">
-      <mat-spinner diameter="48"></mat-spinner>
-      <p>Cargando acciones activas...</p>
+  <!-- KPI GRID -->
+  <div class="mf-kpi-grid">
+    <!-- Estado -->
+    <div class="kpi-card">
+      <span class="kpi-label">ESTADO DEL MERCADO</span>
+      <span class="kpi-val" [class.red]="marketStatus.P_SIT_MERC === 'CERRADO'" [class.green]="marketStatus.P_SIT_MERC === 'ABIERTO'">
+        {{ marketStatus.P_SIT_MERC || '—' }}
+      </span>
     </div>
-  } @else {
-    <p class="stocks-count">{{ stocks.length }} acciones activas disponibles</p>
-    <div class="stocks-grid">
-      <div class="stock-card" *ngFor="let stock of stocks; let i = index"
-           [style.--index]="i"
-           (click)="viewOrderBook(stock.symbol)">
-        <div class="card-top">
-          <div class="stock-symbol">{{ stock.symbol }}</div>
-          <div class="active-badge">ACTIVO</div>
-        </div>
-        <div class="stock-name">{{ stock.name }}</div>
-        <div class="card-footer-row">
-          <span class="view-orders">Ver libro</span>
-          <mat-icon class="stock-icon">auto_graph</mat-icon>
-        </div>
+    
+    <!-- Índices Totales -->
+    <!-- Separemos de a uno o en wrap para que quepa -->
+    <div class="kpi-card pnl-card">
+      <span class="kpi-label">ÍNDICE BURSÁTIL (IBC)</span>
+      <span class="kpi-val green">{{ ibcVal || 0 | number:'1.2-2' }}</span>
+    </div>
+    
+    <!-- Sub Indices -->
+    <div class="kpi-card outline-card">
+      <span class="kpi-label">FINANCIERO / INDUSTRIAL</span>
+      <div class="kpi-val indices-row">
+        <span>{{ indFin || 0 | number:'1.2-2' }}</span>
+        <span class="sep">/</span>
+        <span>{{ indInd || 0 | number:'1.2-2' }}</span>
       </div>
     </div>
-  }
-</div>
 
-<!-- Mobile bottom navigation -->
-<nav class="mobile-bottom-nav">
-  <a class="mbn-item" routerLink="/dashboard" routerLinkActive="active">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
-    <span>Inicio</span>
-  </a>
-  <a class="mbn-item" routerLink="/portfolio" routerLinkActive="active">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M11 2v20c-5.07-.5-9-4.79-9-10s3.93-9.5 9-10zm2.03 0v8.99H22c-.47-4.74-4.24-8.52-8.97-8.99zm0 11.01V22c4.74-.47 8.5-4.25 8.97-8.99h-8.97z"/></svg>
-    <span>Portafolio</span>
-  </a>
-  <a class="mbn-item" routerLink="/graficos" routerLinkActive="active">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M3.5 18.5l6-6 4 4L22 6.92 20.59 5.5l-7.09 8-4-4L2 17z"/></svg>
-    <span>Gráficos</span>
-  </a>
-  <a class="mbn-item" routerLink="/transactions" routerLinkActive="active">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M6.99 11L3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z"/></svg>
-    <span>Transacciones</span>
-  </a>
-  <a class="mbn-item" routerLink="/profile" routerLinkActive="active">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
-    <span>Perfil</span>
-  </a>
-</nav>
+    <!-- Metrics -->
+    <div class="kpi-card">
+      <span class="kpi-label">VOL. ACCIONES / OPERACIONES</span>
+      <div class="kpi-val metrics-row">
+        <span>{{ (resumen.num_tot_acc_negoc || 0) | number }}</span>
+        <span class="sep">|</span>
+        <span>{{ (resumen.num_tot_ope_negoc || 0) | number }} op.</span>
+      </div>
+    </div>
+    
+    <!-- Monto -->
+    <div class="kpi-card highlight-card">
+      <span class="kpi-label">MONTO NEGOCIADO (VES)</span>
+      <span class="kpi-val">${{ (resumen.num_tot_mont_negoc || 0) | number:'1.2-2' }}</span>
+    </div>
+
+    <!-- TITULOS -->
+    <div class="kpi-card titulos-card">
+      <span class="kpi-label">TÍTULOS</span>
+      <div class="titulos-row">
+        <span class="tit-up"><mat-icon>arrow_upward</mat-icon>{{ titulos.up }}</span>
+        <span class="tit-dn"><mat-icon>arrow_downward</mat-icon>{{ titulos.down }}</span>
+        <span class="tit-fl"><mat-icon>remove</mat-icon>{{ titulos.flat }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screener -->
+  <div class="screener-bar">
+    <button class="screener-toggle" (click)="toggleScreener()">
+      <mat-icon>{{ showScreener ? 'expand_less' : 'tune' }}</mat-icon>
+      Screener {{ showScreener ? '' : '(' + screenedStocks.length + '/' + stocks.length + ')' }}
+    </button>
+    @if (showScreener) {
+      <div class="screener-panel">
+        <div class="screener-row">
+          <div class="screener-field">
+            <label>Símbolo / Empresa</label>
+            <input type="text" [(ngModel)]="scrSymbol" placeholder="Ej: BNC">
+          </div>
+          <div class="screener-field">
+            <label>Filtro</label>
+            <select [(ngModel)]="scrFilter">
+              <option value="ALL">Todos</option>
+              <option value="GAINERS">Solo alcistas</option>
+              <option value="LOSERS">Solo bajistas</option>
+            </select>
+          </div>
+          <div class="screener-field">
+            <label>Var % min</label>
+            <input type="number" [(ngModel)]="scrMinVarRel" placeholder="-100">
+          </div>
+          <div class="screener-field">
+            <label>Var % max</label>
+            <input type="number" [(ngModel)]="scrMaxVarRel" placeholder="+100">
+          </div>
+          <div class="screener-field">
+            <label>Volumen ≥</label>
+            <input type="number" [(ngModel)]="scrMinVolume" placeholder="0">
+          </div>
+          <div class="screener-field">
+            <label>Precio ≥</label>
+            <input type="number" [(ngModel)]="scrMinPrice" placeholder="0">
+          </div>
+          <div class="screener-field">
+            <label>Precio ≤</label>
+            <input type="number" [(ngModel)]="scrMaxPrice" placeholder="∞">
+          </div>
+          <div class="screener-field">
+            <label>Ordenar por</label>
+            <select [(ngModel)]="scrSort">
+              <option value="VAR_REL_DESC">Var % ↓</option>
+              <option value="VAR_REL_ASC">Var % ↑</option>
+              <option value="VOLUMEN_DESC">Volumen ↓</option>
+              <option value="PRECIO_DESC">Precio ↓</option>
+            </select>
+          </div>
+          <button class="screener-reset" (click)="resetScreener()">Limpiar</button>
+        </div>
+        <div class="screener-meta">
+          {{ screenedStocks.length }} de {{ stocks.length }} acciones coinciden con el filtro
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- Tabs area -->
+  <mat-tab-group class="mf-tabs" mat-stretch-tabs="false" animationDuration="0ms">
+
+    <!-- ACCIONES TAB -->
+    <mat-tab label="Mercado de Acciones">
+      <div class="mf-table-wrapper">
+        <table class="mf-table">
+          <thead>
+            <tr>
+              <th class="left">SÍMBOLO</th>
+              <th class="left hide-sm">EMPRESA</th>
+              <th class="center">LIBRO</th>
+              <th class="right">PRECIO</th>
+              <th class="right hide-sm">APERT.</th>
+              <th class="right hide-sm">MÁX.</th>
+              <th class="right hide-sm">MÍN.</th>
+              <th class="right">VAR. ABS</th>
+              <th class="right">VAR. %</th>
+              <th class="right hide-md">OPS.</th>
+              <th class="right hide-md">VOLUMEN</th>
+              <th class="right hide-md">MONTO</th>
+              <th class="right text-muted">HORA</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (stock of screenedStocks; track stock.COD_SIMB) {
+              <tr class="stock-row">
+                <td class="left bold c-code">{{ stock.COD_SIMB }}</td>
+                <td class="left muted hide-sm">{{ (stock.DESC_SIMB | slice:0:15) || '—' }}</td>
+                <td class="center action-cell">
+                  <button mat-icon-button class="book-btn" (click)="viewOrderBook(stock.COD_SIMB)" matTooltip="Ver Libro de Órdenes">
+                    <mat-icon>leaderboard</mat-icon>
+                  </button>
+                </td>
+                <td class="right mono bold price-cell">{{ stock.PRECIO | number:'1.2-2' }}</td>
+
+                <td class="right mono font-sm muted hide-sm">{{ stock.PRECIO_APERT | number:'1.2-2' }}</td>
+                <td class="right mono font-sm hide-sm" [class.txt-up]="stock.PRECIO_MAX > stock.PRECIO_APERT">{{ stock.PRECIO_MAX | number:'1.2-2' }}</td>
+                <td class="right mono font-sm hide-sm" [class.txt-dn]="stock.PRECIO_MIN < stock.PRECIO_APERT">{{ stock.PRECIO_MIN | number:'1.2-2' }}</td>
+
+                <td class="right mono badge-cell">
+                  <span class="badge" [class.green]="stock.VAR_ABS > 0" [class.red]="stock.VAR_ABS < 0">
+                    {{ stock.VAR_ABS > 0 ? '+' : '' }}{{ stock.VAR_ABS | number:'1.2-2' }}
+                  </span>
+                </td>
+
+                <td class="right mono badge-cell">
+                  <span class="badge" [class.green]="stock.VAR_REL > 0" [class.red]="stock.VAR_REL < 0" [class.outline]="stock.VAR_REL === 0">
+                    {{ stock.VAR_REL > 0 ? '+' : '' }}{{ stock.VAR_REL | number:'1.2-2' }}%
+                  </span>
+                </td>
+
+                <td class="right mono font-sm hide-md">{{ (stock.TOT_OP_NEGOC ?? 0) | number }}</td>
+
+                <td class="right mono font-sm hide-md">{{ stock.VOLUMEN | number }}</td>
+                <td class="right mono font-sm hide-md">{{ stock.MONTO_EFECTIVO | number:'1.0-0' }}</td>
+                <td class="right mono muted font-sm">{{ stock.HORA || '—' }}</td>
+              </tr>
+            }
+            @if (stocks.length === 0) {
+              <tr>
+                <td colspan="13" class="empty-state">
+                  @if (!(bvcSocket.isConnected$ | async)) {
+                    <mat-spinner diameter="30"></mat-spinner> Conectando WebSocket Backend...
+                  } @else {
+                    Esperando datos del mercado.
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </mat-tab>
+
+    <!-- CRYPTO TAB -->
+    <mat-tab label="Criptomonedas">
+      <div class="crypto-grid">
+        @for (c of cryptosOnly; track c.simbolo.COD_SIMB) {
+          <div class="crypto-card">
+            <div class="c-head">
+              <span class="c-code">{{ c.simbolo.DESC_SIMB || c.simbolo.COD_SIMB }}</span>
+              <span class="c-name">{{ c.simbolo.COD_SIMB }}</span>
+            </div>
+            <div class="c-mid">
+              <div class="c-price">${{ c.simbolo.PRECIO | number:'1.2-6' }}</div>
+              <div class="c-var" [class.green]="c.simbolo.VAR_REL > 0" [class.red]="c.simbolo.VAR_REL < 0">
+                {{ c.simbolo.VAR_REL > 0 ? '+' : '' }}{{ c.simbolo.VAR_REL | number:'1.2-2' }}%
+              </div>
+            </div>
+            <div class="c-foot">
+              <span class="c-vol">Vol: {{ c.simbolo.VOLUMEN | number }}</span>
+              <span class="c-time">{{ c.simbolo.HORA || '—' }}</span>
+            </div>
+          </div>
+        }
+        @if (cryptosOnly.length === 0) {
+          <div class="empty-state w-100">
+            @if (!(bvcSocket.isConnected$ | async)) {
+              <mat-spinner diameter="30"></mat-spinner> Conectando...
+            } @else {
+              No hay cotizaciones crypto en este momento.
+            }
+          </div>
+        }
+      </div>
+    </mat-tab>
+
+    <!-- WEBSOCKET LOG TAB (Solo Admin) -->
+    @if (isAdmin) {
+      <mat-tab label="Dev: Raw WSS Dump">
+        <div class="log-container">
+          <div class="log-entry" *ngFor="let log of wsLogs">
+            <span class="log-time">[{{ log.time }}]</span>
+            <span class="log-event">{{ log.event }}:</span>
+            <span class="log-data">{{ log.data | json }}</span>
+          </div>
+        </div>
+      </mat-tab>
+    }
+  </mat-tab-group>
+
+</div>

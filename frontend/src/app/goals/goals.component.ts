@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -21,6 +21,8 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 
 import { environment } from '../../environments/environment';
+import { BvcSocketService } from '../core/services/bvc-socket.service';
+import { Subscription } from 'rxjs';
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -1229,7 +1231,7 @@ export class CreateAlertDialogComponent implements OnInit {
     }
   `]
 })
-export class GoalsComponent implements OnInit {
+export class GoalsComponent implements OnInit, OnDestroy {
   private apiUrl = environment.apiUrl;
   private token = () => localStorage.getItem('access_token');
 
@@ -1246,17 +1248,64 @@ export class GoalsComponent implements OnInit {
     { text: '¡Hola! Soy el asistente de Caracas Portafolio 👋 ¿En qué puedo ayudarte?', isUser: false }
   ];
 
+  // Real-time market data
+  marketBoard: Record<string, any> = {};
+  private wsSub: Subscription | null = null;
+  private alertsTriggered = new Set<number>();
+
   constructor(
     private http: HttpClient,
     private dialog: MatDialog,
     private snack: MatSnackBar,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private bvcSocket: BvcSocketService
   ) { }
 
   ngOnInit(): void {
     this.checkPushStatus();
     this.loadGoals();
     this.loadAlerts();
+    this.bvcSocket.connect();
+    this.wsSub = this.bvcSocket.stocksMap$.subscribe(board => {
+      this.marketBoard = board;
+      this.checkAlertConditions(board);
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.wsSub?.unsubscribe();
+  }
+
+  /** Get live price for a symbol */
+  livePrice(symbol: string): number | null {
+    const tick = this.marketBoard[symbol];
+    return tick?.PRECIO ?? null;
+  }
+
+  /** Check if live prices hit any alert conditions */
+  private checkAlertConditions(board: Record<string, any>) {
+    for (const alert of this.alerts) {
+      if (this.alertsTriggered.has(alert.id)) continue;
+      const tick = board[alert.stock_symbol];
+      if (!tick?.PRECIO) continue;
+      const price = tick.PRECIO;
+      const bcv = 36; // approximate
+      const priceUsd = price / bcv;
+      
+      let triggered = false;
+      if (alert.condition_type === 'above' && priceUsd >= alert.condition_value) triggered = true;
+      if (alert.condition_type === 'below' && priceUsd <= alert.condition_value) triggered = true;
+      
+      if (triggered) {
+        this.alertsTriggered.add(alert.id);
+        const emoji = alert.condition_type === 'above' ? '📈' : '📉';
+        this.snack.open(
+          `${emoji} ${alert.stock_symbol} ${alert.condition_type === 'above' ? 'superó' : 'bajó de'} $${alert.condition_value.toFixed(2)} — ${alert.message || ''}`,
+          'OK',
+          { duration: 8000 }
+        );
+      }
+    }
   }
 
   // ── Computed ─────────────────────────────────────────────────────────────────

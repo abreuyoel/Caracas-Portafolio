@@ -48,6 +48,12 @@ class ChatMessage(BaseModel):
     chart_context: Optional[ChartContext] = None
     stock_symbol: Optional[str] = None   # Para análisis histórico desde el chat
     days: Optional[int] = None           # Cantidad de días a analizar (ej: 365)
+    # Modo comparativo
+    comparison_mode: bool = False
+    chat_type: Optional[str] = None      # 'technical' | 'comparative'
+    stocks_context: Optional[List[Dict[str, Any]]] = None
+    order_book: Optional[List[Dict[str, Any]]] = None
+    order_books: Optional[Dict[str, Any]] = None
 
 
 class ChatResponse(BaseModel):
@@ -395,6 +401,9 @@ async def chat_with_ai(
         # 🔍 DETECCIÓN DE MODO ANÁLISIS HISTÓRICO (días explícitos desde el chat)
         has_historical_request = bool(chat_data.stock_symbol and chat_data.days)
 
+        # 🔍 DETECCIÓN DE MODO COMPARATIVO
+        is_comparative = chat_data.comparison_mode and chat_data.stocks_context and len(chat_data.stocks_context) >= 2
+
         # 🔍 DETECCIÓN DE MODO GRÁFICO
         has_chart_data = (
             chat_data.chart_context is not None and
@@ -403,10 +412,63 @@ async def chat_with_ai(
             chat_data.chart_context.symbol.strip() != ''
         )
 
-        logger.info(f"🔍 [CHAT] chart={has_chart_data} historical={has_historical_request}")
+        logger.info(f"🔍 [CHAT] chart={has_chart_data} historical={has_historical_request} comparative={is_comparative}")
+
+        # ── MODO COMPARATIVO: varias acciones lado a lado ─────────────────────
+        if is_comparative:
+            stocks_ctx = chat_data.stocks_context or []
+            blocks = []
+            for i, s in enumerate(stocks_ctx[:4]):  # max 4 acciones
+                sym  = s.get('symbol', f'Acción {i+1}')
+                name = s.get('name', '')
+                ind  = s.get('indicators') or {}
+                last = s.get('lastCandle') or {}
+                price = last.get('close', 0)
+                chg_pct = s.get('priceChangePct', 0)
+
+                b = [f"{'='*40}", f"📊 {sym} — {name}", f"💰 Precio: {price:.4f} | Cambio: {chg_pct:+.2f}%"]
+                if ind.get('rsi14') is not None:
+                    rsi = ind['rsi14']
+                    zona = "SOBRECOMPRADO" if rsi > 70 else "SOBREVENDIDO" if rsi < 30 else f"{rsi:.1f}"
+                    b.append(f"• RSI(14): {rsi:.2f} ({zona})")
+                if ind.get('ema20') and ind.get('ema50'):
+                    cross = "ALCISTA" if ind['ema20'] > ind['ema50'] else "BAJISTA"
+                    b.append(f"• EMAs: {cross} (EMA20={ind['ema20']:.2f} vs EMA50={ind['ema50']:.2f})")
+                if ind.get('macd_hist') is not None:
+                    momentum = "↑" if ind['macd_hist'] > 0 else "↓"
+                    b.append(f"• MACD histograma: {ind['macd_hist']:.4f} {momentum}")
+                if ind.get('adx') is not None:
+                    b.append(f"• ADX: {ind['adx']:.1f} ({'TENDENCIA FUERTE' if ind['adx'] > 25 else 'SIN TENDENCIA'})")
+                if ind.get('volume_ratio') is not None:
+                    b.append(f"• Volumen ratio: {ind['volume_ratio']:.2f}x")
+                if ind.get('trend'):
+                    b.append(f"• Tendencia: {ind['trend']}")
+                blocks.append("\n".join(b))
+
+            comparison_block = "\n".join(blocks)
+            prompt = f"""Eres analista técnico experto en la BVC. Comparas múltiples acciones con criterio objetivo.
+{profile_block}
+
+COMPARACIÓN DE ACCIONES:
+{comparison_block}
+
+PREGUNTA: {chat_data.message}
+
+REGLAS:
+1. Compara DIRECTAMENTE los indicadores de cada acción (tabla o lista paralela)
+2. Identifica cuál tiene mejor momentum y menor riesgo relativo
+3. Da un ranking claro: ¿cuál comprar primero, cuál esperar, cuál evitar?
+4. Menciona liquidez BVC como factor de riesgo cuando el volumen es bajo
+5. Máximo 400 palabras, directo, sin rodeos
+6. Cierra con: "MEJOR OPCIÓN: [símbolo] por [razón breve]"
+{profile_instruction}
+
+ANÁLISIS COMPARATIVO:"""
 
         # ── MODO HISTÓRICO: el usuario pide analizar X días de una acción ────
-        if has_historical_request:
+        if is_comparative:
+            pass  # prompt already built above
+        elif has_historical_request:
             sym = chat_data.stock_symbol.upper().strip()
             days = min(max(chat_data.days, 1), 1825)  # entre 1 y 5 años
             from app.services.bvc_scraper import bvc_scraper
@@ -552,7 +614,37 @@ RESPUESTA:"""
                 f"DEBEN expresarse en {price_symbol}. NO mezcles monedas en la respuesta."
             )
 
-            prompt = f"""Eres analista técnico experto en BVC.
+            # Calcular señal dominante para dar contexto al modelo
+            bullish_signals = 0
+            bearish_signals = 0
+            if ind.get('rsi14'):
+                rsi = ind['rsi14']
+                if rsi > 55: bullish_signals += 1
+                elif rsi < 45: bearish_signals += 1
+                if rsi > 70: bearish_signals += 1  # sobrecomprado = posible reversal
+                if rsi < 30: bullish_signals += 1  # sobrevendido = posible rebote
+            if ind.get('ema20') and ind.get('ema50'):
+                if ind['ema20'] > ind['ema50']: bullish_signals += 2
+                else: bearish_signals += 2
+            if ind.get('macd_hist'):
+                if ind['macd_hist'] > 0: bullish_signals += 1
+                else: bearish_signals += 1
+            if ind.get('adx') and ind.get('adx') > 25:
+                bullish_signals += 1 if (ind.get('aroon_up', 0) or 0) > (ind.get('aroon_down', 0) or 0) else 0
+                bearish_signals += 1 if (ind.get('aroon_down', 0) or 0) > (ind.get('aroon_up', 0) or 0) else 0
+
+            signal_bias = "ALCISTA" if bullish_signals > bearish_signals + 1 else "BAJISTA" if bearish_signals > bullish_signals + 1 else "MIXTO"
+            signal_instruction = (
+                f"CONTEXTO ESTADÍSTICO: {bullish_signals} señales alcistas vs {bearish_signals} bajistas → sesgo {signal_bias}. "
+                "Si el sesgo es claro (diferencia ≥ 2), da recomendación firme COMPRAR o VENDER. "
+                "Solo recomienda MANTENER si las señales están genuinamente equilibradas (diferencia ≤ 1) "
+                "O si ya tienes posición abierta y no hay catalizador claro. "
+                "NUNCA des MANTENER por defecto cuando hay señales claras en un sentido."
+            )
+
+            prompt = f"""Eres analista técnico experto en la Bolsa de Valores de Caracas (BVC).
+Eres conocido por análisis directos, sin evasivas, con recomendaciones accionables.
+En la BVC los volúmenes son bajos y la liquidez es limitada — esto DEBE mencionarse cuando impacte la operación.
 {profile_block}
 
 DATOS TÉCNICOS DE {ctx.symbol}:
@@ -560,20 +652,22 @@ DATOS TÉCNICOS DE {ctx.symbol}:
 
 {currency_instruction}
 
+{signal_instruction}
+
 PREGUNTA: {chat_data.message}
 
-INSTRUCCIONES:
-1. Analiza TODOS los indicadores mencionados arriba
-2. Menciona la EVOLUCIÓN de cada indicador (cómo cambió en el período)
-3. Explica qué significa cada valor
-4. Da una recomendación clara: COMPRAR, MANTENER o VENDER
-5. Justifica con al menos 3 indicadores diferentes
-6. Máximo 450 palabras
+REGLAS DE RESPUESTA:
+1. Abre con el veredicto: **COMPRAR / VENDER / MANTENER** en negrita, en la primera línea
+2. Explica la evolución de cada indicador relevante (cómo cambió, qué señala ahora)
+3. Cita mínimo 3 indicadores concretos con sus valores numéricos
+4. Si hay baja liquidez (volume_ratio < 0.5 o pocos datos), advierte del riesgo de ejecución
+5. Cierra con niveles clave: precio objetivo, stop loss sugerido
+6. Máximo 400 palabras — conciso y directo
 7. Español venezolano profesional
-8. Todos los valores monetarios en {price_symbol}
+8. Valores monetarios en {price_symbol}
 {profile_instruction}
 
-RESPUESTA:"""
+ANÁLISIS:"""
 
         else:
             # Modo general: asesor financiero con perfil del usuario

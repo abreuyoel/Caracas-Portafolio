@@ -356,12 +356,12 @@ class BVCScraper:
     def _get_fallback_stocks(self) -> List[Dict]:
         """
         Fallback con acciones verificadas como ACTIVAS y con movimiento reciente
-        (último trade ≤ 3 meses, verificado en marzo 2026).
-        GZL.A, GZL.B, OCE y otras con último movimiento > 3 meses fueron removidas.
+        (último trade ≤ 3 meses, verificado en abril 2026). Total: 42 acciones.
+        Removidas: GZL.A, GZL.B (inactivas >3 meses), CCP.B (sin movimiento reciente).
+        Añadidas: FNV (Fábrica Nacional de Vidrio, ISIN VEV000761008, activa abr-2026).
         """
         return [
             {'symbol': 'ABC.A', 'name': 'BANCO DEL CARIBE,C.A.BCO.UNIV.CLASE (A)', 'is_active': True, 'status': 'ACTIVO'},
-            {'symbol': 'ABC.B', 'name': 'BANCO DEL CARIBE,C.A.BCO.UNIV.CLASE (B)', 'is_active': True, 'status': 'ACTIVO'},
             {'symbol': 'ALZ.B', 'name': 'ALALZA INVERSIONES, C.A. CLASE "B"', 'is_active': True, 'status': 'ACTIVO'},
             {'symbol': 'ARC.A', 'name': 'ARCA INM. Y VALORES, C.A. CLASE "A"', 'is_active': True, 'status': 'ACTIVO'},
             {'symbol': 'ARC.B', 'name': 'ARCA INM. Y VALORES, C.A. CLASE "B"', 'is_active': True, 'status': 'ACTIVO'},
@@ -369,21 +369,19 @@ class BVCScraper:
             {'symbol': 'BPV', 'name': 'BANCO PROVINCIAL, S.A. BCO. UNIVERSAL', 'is_active': True, 'status': 'ACTIVO'},
             {'symbol': 'BVCC', 'name': 'BOLSA DE VALORES DE CARACAS, C.A.', 'is_active': True, 'status': 'ACTIVO'},
             {'symbol': 'BVL', 'name': 'BANCO DE VENEZUELA, S.A. BCO.UNIVERSAL', 'is_active': True, 'status': 'ACTIVO'},
-            {'symbol': 'CCP.B', 'name': 'CLABE CAPITAL, C.A. CLASE (B)', 'is_active': True, 'status': 'ACTIVO'},
             {'symbol': 'CCR', 'name': 'CERAMICA CARABOBO, SACA', 'is_active': True, 'status': 'ACTIVO'},
             {'symbol': 'CGQ', 'name': 'CORP.GRUPO QUIMICO, C.A.', 'is_active': True, 'status': 'ACTIVO'},
-            {'symbol': 'CIE', 'name': 'CORP. INDUSTRIAL DE ENERGIA CA SACA', 'is_active': True, 'status': 'ACTIVO'},
             {'symbol': 'CRM.A', 'name': 'CORIMON, C.A.', 'is_active': True, 'status': 'ACTIVO'},
             {'symbol': 'DOM', 'name': 'DOMINGUEZ & CIA., S.A.', 'is_active': True, 'status': 'ACTIVO'},
             {'symbol': 'EFE', 'name': 'PRODUCTOS EFE S.A.', 'is_active': True, 'status': 'ACTIVO'},
             {'symbol': 'ENV', 'name': 'ENVASES VENEZOLANOS S.A.', 'is_active': True, 'status': 'ACTIVO'},
             {'symbol': 'FFV.A', 'name': 'FIVENCA FONDO CAPITAL PRIVADO. CLASE "A"', 'is_active': True, 'status': 'ACTIVO'},
+            {'symbol': 'CCP.B', 'name': 'CLABE CAPITAL, C.A. CLASE (B)', 'is_active': True, 'status': 'ACTIVO'},
             {'symbol': 'FFV.B', 'name': 'FIVENCA FONDO CAPITAL PRIVADO. CLASE "B"', 'is_active': True, 'status': 'ACTIVO'},
             {'symbol': 'FNC', 'name': 'FABRICA NACIONAL DE CEMENTOS, C.A.', 'is_active': True, 'status': 'ACTIVO'},
+            {'symbol': 'FNV', 'name': 'C.A. FABRICA NACIONAL DE VIDRIO', 'is_active': True, 'status': 'ACTIVO'},
             {'symbol': 'GMC.B', 'name': 'GRUPO MANTRA CORP. C.A. CLASE B', 'is_active': True, 'status': 'ACTIVO'},
             {'symbol': 'GZL', 'name': 'GRUPO ZULIANO, C.A.', 'is_active': True, 'status': 'ACTIVO'},
-            {'symbol': 'GZL.A', 'name': 'GRUPO ZULIANO, PREF. CLASE "A"', 'is_active': True, 'status': 'ACTIVO'},
-            {'symbol': 'GZL.B', 'name': 'GRUPO ZULIANO, PREF. CLASE "B"', 'is_active': True, 'status': 'ACTIVO'},
             {'symbol': 'ICP.B', 'name': 'INVERSIONES CRECEPYMES, C.A. CLASE "B"', 'is_active': True, 'status': 'ACTIVO'},
             {'symbol': 'IMP.B', 'name': 'IMPULSA VENTURE CAPITAL, C.A. CLASE "B"', 'is_active': True, 'status': 'ACTIVO'},
             {'symbol': 'IVC.A', 'name': 'INVACA, INVESTMENT COMPANY, SACA. "A"', 'is_active': True, 'status': 'ACTIVO'},
@@ -583,6 +581,92 @@ class BVCScraper:
 
         except Exception as e:
             logger.error(f"❌ get_live_candle {symbol}: {e}")
+            return None
+        
+    async def get_market_board(self) -> dict | None:
+        """
+        Descarga TODA la tabla en vivo de la página del mercado (market.bolsadecaracas.com).
+        Devuelve un diccionario estructurado mapeando cada Symbol -> datos OHLCV + Order Book.
+        """
+        import httpx
+        from bs4 import BeautifulSoup
+        from datetime import date as date_type
+
+        try:
+            async with httpx.AsyncClient(
+                verify=False,
+                timeout=20,
+                follow_redirects=True,
+                headers={
+                    "User-Agent": (
+                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                        "AppleWebKit/537.36 (KHTML, like Gecko) "
+                        "Chrome/120.0.0.0 Safari/537.36"
+                    ),
+                    "Accept-Language": "es-VE,es;q=0.9",
+                }
+            ) as client:
+                resp = await client.get(MARKET_URL)
+                resp.raise_for_status()
+                html = resp.text
+
+            soup = BeautifulSoup(html, 'lxml')
+            today_iso = date_type.today().isoformat()
+
+            h4_tag = soup.find('h4', class_='text-white')
+            if h4_tag:
+                spans = h4_tag.find_all('span', class_=lambda c: c and '__estado' in c)
+                if len(spans) >= 2:
+                    date_text = spans[1].get_text(strip=True)
+                    try:
+                        parts = date_text.split('/')
+                        if len(parts) == 3:
+                            day, month, year = int(parts[0]), int(parts[1]), int(parts[2])
+                            if year < 100: year += 2000
+                            today_iso = f"{year:04d}-{month:02d}-{day:02d}"
+                    except Exception:
+                        pass
+
+            board = {}
+            rows = soup.select('table tbody tr')
+            for row in rows:
+                cells = row.find_all('td')
+                if len(cells) < 17:
+                    continue
+
+                symbol = cells[3].get_text(strip=True).upper()
+                if not symbol: continue
+
+                def n(idx: int) -> float:
+                    txt = cells[idx].get_text(strip=True).replace('.', '').replace(',', '.')
+                    try: return float(txt)
+                    except Exception: return 0.0
+
+                close_p = n(8)
+                # Si el precio es 0, ignorar entrada vacia si no tiene ni bid/ask real
+                
+                board[symbol] = {
+                    'symbol': symbol,
+                    'time': today_iso,
+                    'bid_vol': int(n(4)),
+                    'bid_price': n(5),
+                    'ask_price': n(6),
+                    'ask_vol': int(n(7)),
+                    'close': close_p,
+                    'open': n(9),
+                    'change_pct': n(10),
+                    'change_abs': n(11),
+                    'volume': n(12),
+                    'amount': n(13),
+                    'trades': int(n(14)),
+                    'high': n(15),
+                    'low': n(16),
+                    'is_live': True
+                }
+
+            return board
+        except Exception as e:
+            logger.error(f"❌ get_market_board error: {e}")
             return None
         
     

@@ -1,0 +1,289 @@
+<!-- Mobile top bar -->
+<div class="mobile-topbar">
+  <a class="mobile-back-btn" routerLink="/dashboard">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+  </a>
+  <span class="mobile-topbar-title">Aprende</span>
+</div>
+
+<!-- ── Lesson overlay ──────────────────────────────────────────────────────── -->
+@if (activeLesson) {
+  <div class="lesson-overlay">
+    <div class="lesson-modal">
+
+      <!-- Header -->
+      <div class="lesson-modal__header">
+        <div class="lm-icon">{{ activeLesson.icon }}</div>
+        <div class="lm-title-block">
+          <span class="lm-eyebrow">Nivel {{ activeLevelId }}</span>
+          <h2>{{ activeLesson.title }}</h2>
+          <span class="lm-meta">{{ activeLesson.duration }} · {{ activeLesson.xp }} XP</span>
+        </div>
+        <button class="lm-close" (click)="closeLesson()">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+
+      <!-- Body: Theory / Reading / Fundamental -->
+      @if (activeLesson.type !== 'quiz' && activeLesson.type !== 'live') {
+        <div class="lesson-modal__body">
+          <div class="lesson-content" [innerHTML]="activeLesson.content"></div>
+        </div>
+        <div class="lesson-modal__footer">
+          @if (isCompleted(activeLesson.id)) {
+            <span class="already-done"><mat-icon>check_circle</mat-icon> Ya completaste esta lección</span>
+            <button class="btn-primary" (click)="closeLesson()">Volver al temario</button>
+          } @else {
+            <button class="btn-primary" (click)="completeLesson()">
+              Marcar como completada <mat-icon>check</mat-icon>
+            </button>
+          }
+        </div>
+      }
+
+      <!-- Body: Quiz -->
+      @if (activeLesson.type === 'quiz') {
+        <div class="lesson-modal__body quiz-body">
+
+          @if (!quizSubmitted) {
+            @for (q of activeLesson.questions!; track $index; let qi = $index) {
+              <div class="quiz-question">
+                <p class="qn-num">Pregunta {{ qi + 1 }} de {{ activeLesson.questions!.length }}</p>
+                <p class="qn-text">{{ q.q }}</p>
+                <div class="qn-options">
+                  @for (opt of q.options; track $index; let oi = $index) {
+                    <button class="qn-option" [class.selected]="quizAnswers[qi] === oi"
+                            (click)="selectAnswer(qi, oi)">
+                      <span class="qn-letter">{{ ['A','B','C','D'][oi] }}</span>
+                      {{ opt }}
+                    </button>
+                  }
+                </div>
+              </div>
+            }
+            <div class="quiz-footer">
+              <button class="btn-primary" [disabled]="!quizAllAnswered" (click)="submitQuiz()">
+                Enviar respuestas
+              </button>
+            </div>
+
+          } @else {
+            <!-- Results -->
+            <div class="quiz-result" [class.passed]="quizScore >= 60" [class.failed]="quizScore < 60">
+              <div class="qr-score">{{ quizScore }}%</div>
+              <div class="qr-label">{{ quizScore >= 60 ? '¡Aprobado!' : 'Inténtalo de nuevo' }}</div>
+            </div>
+
+            @for (q of activeLesson.questions!; track $index; let qi = $index) {
+              <div class="quiz-review">
+                <p class="qr-q">{{ q.q }}</p>
+                <div class="qr-options">
+                  @for (opt of q.options; track $index; let oi = $index) {
+                    <div class="qr-opt"
+                         [class.correct]="oi === q.correct"
+                         [class.wrong]="quizAnswers[qi] === oi && oi !== q.correct">
+                      <mat-icon>{{ oi === q.correct ? 'check_circle' : (quizAnswers[qi] === oi ? 'cancel' : 'radio_button_unchecked') }}</mat-icon>
+                      {{ opt }}
+                    </div>
+                  }
+                </div>
+                <p class="qr-explanation"><strong>Explicación:</strong> {{ q.explanation }}</p>
+              </div>
+            }
+
+            <div class="quiz-footer">
+              @if (quizScore < 60) {
+                <button class="btn-secondary" (click)="quizSubmitted = false; quizAnswers = activeLesson!.questions!.map(() => null)">
+                  <mat-icon>refresh</mat-icon> Intentar de nuevo
+                </button>
+              }
+              <button class="btn-primary" (click)="closeLesson()">Volver al temario</button>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Body: Live chart -->
+      @if (activeLesson.type === 'live') {
+        <div class="lesson-modal__body live-body">
+          <p class="live-intro">
+            {{ isMarketOpen ? '🟢 Mercado ABIERTO — Gráfico en tiempo real' : '🔴 Mercado cerrado — Mostrando último histórico disponible' }}
+          </p>
+          <div class="live-sym-pills">
+            @for (s of liveStocks; track s) {
+              <button class="live-pill" [class.active]="liveChartSymbol === s"
+                      (click)="changeLiveSymbol(s)">{{ s }}</button>
+            }
+          </div>
+          @if (liveChartLoading) {
+            <div class="live-loading"><mat-spinner diameter="40"></mat-spinner></div>
+          }
+          <div #liveChartContainer class="live-chart-area"></div>
+          <div class="lesson-content" [innerHTML]="activeLesson.content"></div>
+        </div>
+        <div class="lesson-modal__footer">
+          <button class="btn-primary" (click)="completeLesson()">Completar lección</button>
+        </div>
+      }
+
+    </div>
+  </div>
+}
+
+<!-- ── Main page ───────────────────────────────────────────────────────────── -->
+<div class="aprende-container">
+
+  <!-- Hero -->
+  <div class="aprende-hero">
+    <div class="hero-content">
+      <div class="hero-eyebrow">Academia · Bolsa de Caracas</div>
+      <h1>Aprende a <span class="hero-accent">Invertir</span></h1>
+      <p>Desde cero absoluto hasta trader profesional. Una ruta completa, gamificada y diseñada para el mercado venezolano.</p>
+
+      <div class="hero-stats">
+        <div class="hs-item">
+          <span class="hs-val">{{ totalXp }}</span>
+          <span class="hs-label">XP ganados</span>
+        </div>
+        <div class="hs-item">
+          <span class="hs-val">{{ earnedBadges.length }}/{{ levels.length }}</span>
+          <span class="hs-label">Medallas</span>
+        </div>
+        <div class="hs-item">
+          <span class="hs-val">{{ progress.completedLessons.length }}</span>
+          <span class="hs-label">Lecciones completadas</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Badge showcase -->
+    <div class="badge-showcase">
+      @for (level of levels; track level.id) {
+        <div class="badge-item" [class.earned]="levelProgress(level) === 100" [title]="level.badgeName">
+          <div class="badge-circle" [style.border-color]="levelProgress(level) === 100 ? level.color : 'rgba(255,255,255,0.1)'">
+            <span class="badge-emoji">{{ level.badge }}</span>
+          </div>
+          <span class="badge-name" [style.color]="levelProgress(level) === 100 ? level.color : '#475569'">{{ level.badgeName }}</span>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Progress bar global -->
+  @if (nextBadge) {
+    <div class="global-progress-bar">
+      <span>Próxima medalla: {{ nextBadge.badge }} {{ nextBadge.badgeName }}</span>
+      <div class="gpb-track">
+        <div class="gpb-fill" [style.width.%]="levelProgress(nextBadge)"></div>
+      </div>
+      <span>{{ levelProgress(nextBadge) }}%</span>
+    </div>
+  }
+
+  <!-- ── Levels ────────────────────────────────────────────────────────────── -->
+  @for (level of levels; track level.id; let li = $index) {
+    <section class="level-section" [class.locked]="!levelUnlocked(li)">
+
+      <!-- Level header -->
+      <div class="level-header" [style.border-color]="level.color">
+        <div class="lh-left">
+          <span class="lh-badge" [style.background]="level.color">{{ level.badge }}</span>
+          <div>
+            <div class="lh-num">Nivel {{ level.id }}</div>
+            <h2 class="lh-title">{{ level.title }}</h2>
+            <p class="lh-sub">{{ level.subtitle }}</p>
+          </div>
+        </div>
+        <div class="lh-right">
+          @if (!levelUnlocked(li)) {
+            <div class="lock-badge"><mat-icon>lock</mat-icon> Completa el nivel anterior</div>
+          } @else {
+            <div class="level-progress-ring">
+              <svg width="64" height="64" viewBox="0 0 64 64">
+                <circle cx="32" cy="32" r="28" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="5"/>
+                <circle cx="32" cy="32" r="28" fill="none" [attr.stroke]="level.color" stroke-width="5"
+                  stroke-linecap="round"
+                  [attr.stroke-dasharray]="175.9"
+                  [attr.stroke-dashoffset]="175.9 * (1 - levelProgress(level) / 100)"
+                  transform="rotate(-90 32 32)"/>
+              </svg>
+              <span class="ring-pct" [style.color]="level.color">{{ levelProgress(level) }}%</span>
+            </div>
+          }
+          <div class="lh-xp"><mat-icon>bolt</mat-icon> {{ level.totalXp }} XP</div>
+        </div>
+      </div>
+
+      <!-- Lessons grid -->
+      @if (levelUnlocked(li)) {
+        <div class="lessons-grid">
+          @for (lesson of level.lessons; track lesson.id) {
+            <button class="lesson-card"
+                    [class.completed]="isCompleted(lesson.id)"
+                    [class.type-quiz]="lesson.type === 'quiz'"
+                    [class.type-live]="lesson.type === 'live'"
+                    [class.type-fundamental]="lesson.type === 'fundamental'"
+                    (click)="openLesson(lesson, level.id)">
+              <div class="lc-icon">{{ lesson.icon }}</div>
+              <div class="lc-body">
+                <span class="lc-type">{{ lesson.type | titlecase }}</span>
+                <span class="lc-title">{{ lesson.title }}</span>
+                <div class="lc-footer">
+                  <span class="lc-duration"><mat-icon>schedule</mat-icon>{{ lesson.duration }}</span>
+                  <span class="lc-xp">+{{ lesson.xp }} XP</span>
+                </div>
+              </div>
+              @if (isCompleted(lesson.id)) {
+                <div class="lc-done"><mat-icon>check_circle</mat-icon></div>
+              }
+            </button>
+          }
+        </div>
+      }
+
+    </section>
+  }
+
+  <!-- ── 20 Ideas section ──────────────────────────────────────────────────── -->
+  <section class="coming-soon-section">
+    <h2>Lo que viene en Caracas Portafolio</h2>
+    <p class="cs-sub">Contenido exclusivo planificado para las próximas versiones</p>
+    <div class="cs-grid">
+      @for (idea of comingSoonIdeas; track idea.title) {
+        <div class="cs-card">
+          <div class="cs-icon">{{ idea.icon }}</div>
+          <div class="cs-body">
+            <strong>{{ idea.title }}</strong>
+            <span>{{ idea.desc }}</span>
+          </div>
+          <div class="cs-tag">{{ idea.tag }}</div>
+        </div>
+      }
+    </div>
+  </section>
+
+</div>
+
+<!-- Mobile bottom navigation -->
+<nav class="mobile-bottom-nav">
+  <a class="mbn-item" routerLink="/dashboard" routerLinkActive="active">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+    <span>Inicio</span>
+  </a>
+  <a class="mbn-item" routerLink="/portfolio" routerLinkActive="active">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M11 2v20c-5.07-.5-9-4.79-9-10s3.93-9.5 9-10zm2.03 0v8.99H22c-.47-4.74-4.24-8.52-8.97-8.99zm0 11.01V22c4.74-.47 8.5-4.25 8.97-8.99h-8.97z"/></svg>
+    <span>Portafolio</span>
+  </a>
+  <a class="mbn-item" routerLink="/graficos" routerLinkActive="active">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M3.5 18.5l6-6 4 4L22 6.92 20.59 5.5l-7.09 8-4-4L2 17z"/></svg>
+    <span>Gráficos</span>
+  </a>
+  <a class="mbn-item" routerLink="/aprende" routerLinkActive="active">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3L1 9l4 2.18V15c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2v-3.82L21 9l-9-6zm0 2.34L18.18 9 12 12.34 5.82 9 12 5.34zM17 14.5c0 .28-.22.5-.5.5h-9c-.28 0-.5-.22-.5-.5v-2.76l5 2.72 5-2.72v2.76z"/></svg>
+    <span>Aprende</span>
+  </a>
+  <a class="mbn-item" routerLink="/profile" routerLinkActive="active">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+    <span>Perfil</span>
+  </a>
+</nav>

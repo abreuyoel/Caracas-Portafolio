@@ -1,0 +1,323 @@
+<!-- Mobile top bar -->
+<div class="mobile-topbar">
+  <a class="mobile-back-btn" routerLink="/dashboard">
+    <mat-icon>arrow_back</mat-icon>
+  </a>
+  <span class="mobile-topbar-title">Paper Trading</span>
+</div>
+
+<div class="pt-page">
+
+  <!-- ── Header ──────────────────────────────────────────────────────────────── -->
+  <header class="pt-header">
+    <div class="pt-header__left">
+      <a class="back-btn" routerLink="/dashboard"><mat-icon>arrow_back</mat-icon></a>
+      <div>
+        <p class="eyebrow">Caracas Portafolio</p>
+        <h1>Paper Trading <span class="badge-sim">SIMULADO</span></h1>
+      </div>
+    </div>
+    <div class="pt-header__right">
+      @if (!resetConfirm) {
+        <button class="btn-ghost btn-reset" (click)="resetPortfolio()" matTooltip="Reiniciar portafolio a $10,000">
+          <mat-icon>restart_alt</mat-icon> Reiniciar
+        </button>
+      } @else {
+        <div class="reset-confirm-row">
+          <span>¿Reiniciar? Se perderán todas las operaciones.</span>
+          <button class="btn-danger" (click)="resetPortfolio()">Sí, reiniciar</button>
+          <button class="btn-ghost" (click)="cancelReset()">Cancelar</button>
+        </div>
+      }
+    </div>
+  </header>
+
+  <!-- Disclaimer -->
+  <div class="disclaimer">
+    <mat-icon>info</mat-icon>
+    <span>Las operaciones son <strong>simuladas</strong>. No se mueve dinero real.
+      Los precios son los últimos precios disponibles de la BVC.
+      Empiezas con <strong>$10,000 virtuales</strong>.</span>
+  </div>
+
+  @if (loading) {
+    <div class="pt-loading">
+      <mat-spinner diameter="44" strokeWidth="3"></mat-spinner>
+      <p>Cargando portafolio simulado…</p>
+    </div>
+  } @else if (portfolio) {
+
+    <!-- ── Stats bar ────────────────────────────────────────────────────────── -->
+    <div class="stats-bar">
+      <div class="stat-card">
+        <span class="stat-label">Efectivo disponible</span>
+        <span class="stat-value cash">{{ formatUsd(portfolio.virtual_balance_usd) }}</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Valor portafolio total</span>
+        <span class="stat-value">{{ formatUsd(portfolio.total_portfolio_value_usd) }}</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">P&L Total</span>
+        <span class="stat-value" [class.up]="portfolio.total_pnl_usd >= 0" [class.dn]="portfolio.total_pnl_usd < 0">
+          {{ portfolio.total_pnl_usd >= 0 ? '+' : '' }}{{ formatUsd(portfolio.total_pnl_usd) }}
+          <small>({{ formatPct(portfolio.total_pnl_pct) }})</small>
+        </span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Invertido en acciones</span>
+        <span class="stat-value">{{ formatUsd(portfolio.total_invested_usd) }}</span>
+      </div>
+      <div class="stat-card stat-card--bcv">
+        <span class="stat-label">Tasa BCV</span>
+        <span class="stat-value">Bs {{ portfolio.bcv_rate.toFixed(2) }}</span>
+      </div>
+    </div>
+
+    <!-- Progress bar -->
+    <div class="progress-wrap">
+      <span class="progress-label">$0</span>
+      <div class="progress-track">
+        <div class="progress-fill" [class.loss]="portfolio.total_pnl_usd < 0"
+             [style.width.%]="progressPct()">
+          <span class="progress-dot"></span>
+        </div>
+        <div class="progress-baseline"></div>
+      </div>
+      <span class="progress-label">{{ formatUsd(portfolio.total_portfolio_value_usd) }}</span>
+    </div>
+
+    <!-- ── Main grid ────────────────────────────────────────────────────────── -->
+    <div class="pt-grid">
+
+      <!-- Order panel -->
+      <div class="panel panel--order">
+        <h2 class="panel-title"><mat-icon>swap_horiz</mat-icon> Nueva Orden</h2>
+
+        <!-- Mode tabs -->
+        <div class="order-tabs mode-tabs" style="margin-bottom: 8px;">
+          <button class="order-tab" [class.buy]="tradeMode==='MARKET'" [class.sell]="tradeMode==='MARKET'" [class.inactive]="tradeMode!=='MARKET'" (click)="tradeMode='MARKET'">A Mercado</button>
+          <button class="order-tab" [class.buy]="tradeMode==='LIMIT'" [class.sell]="tradeMode==='LIMIT'" [class.inactive]="tradeMode!=='LIMIT'" (click)="tradeMode='LIMIT'">A Límite</button>
+        </div>
+
+        <!-- BUY / SELL tabs -->
+        <div class="order-tabs">
+          <button class="order-tab" [class.buy]="orderType==='BUY'" (click)="orderType='BUY'">
+            <mat-icon>trending_up</mat-icon> Comprar
+          </button>
+          <button class="order-tab" [class.sell]="orderType==='SELL'" (click)="orderType='SELL'">
+            <mat-icon>trending_down</mat-icon> Vender
+          </button>
+        </div>
+
+        <!-- Stock search -->
+        <div class="field">
+          <label>Acción</label>
+          <div class="search-wrap">
+            <input class="pt-input" [(ngModel)]="searchQuery" (input)="filterStocks()"
+                   (focus)="showDropdown=true" placeholder="Buscar símbolo o empresa…">
+            @if (selectedStock) {
+              <button class="clear-btn" (click)="clearStock()"><mat-icon>close</mat-icon></button>
+            }
+          </div>
+          @if (showDropdown && filteredStocks.length > 0 && !selectedStock) {
+            <div class="stock-dropdown">
+              @for (s of filteredStocks; track s.symbol) {
+                <button class="stock-option" (click)="selectStock(s)">
+                  <span class="so-symbol">{{ s.symbol }}</span>
+                  <span class="so-name">{{ s.name }}</span>
+                  <span class="so-price">${{ s.last_price_usd.toFixed(4) }}</span>
+                </button>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- Selected stock info -->
+        @if (selectedStock) {
+          <div class="selected-stock-info">
+            <div class="ssi-row">
+              <span class="ssi-symbol">{{ selectedStock.symbol }}</span>
+              <span class="ssi-name">{{ selectedStock.name }}</span>
+            </div>
+            <div class="ssi-prices">
+              <span>${{ (orderPriceBs / (portfolio.bcv_rate || 36)).toFixed(4) }} USD</span>
+              <span class="sep">·</span>
+              <span>Bs {{ orderPriceBs.toLocaleString('es-VE', {minimumFractionDigits:2}) }}</span>
+            </div>
+            @if (tradeMode === 'LIMIT' && marketBoard[selectedStock.symbol]) {
+              <div class="ssi-depth" style="display: flex; gap: 12px; margin-top: 8px; font-size: 0.8rem;">
+                <span style="color: var(--dn); opacity: {{ orderType === 'BUY' ? 1 : 0.4 }}">
+                  Venta: Bs {{ marketBoard[selectedStock.symbol].ask_price }} (Vol: {{ marketBoard[selectedStock.symbol].ask_vol }})
+                </span>
+                <span style="color: var(--up); opacity: {{ orderType === 'SELL' ? 1 : 0.4 }}">
+                  Compra: Bs {{ marketBoard[selectedStock.symbol].bid_price }} (Vol: {{ marketBoard[selectedStock.symbol].bid_vol }})
+                </span>
+              </div>
+            }
+            @if (orderType === 'SELL' && heldQty > 0) {
+              <div class="ssi-held">Tienes {{ heldQty }} accs. en cartera</div>
+            }
+            @if (orderType === 'SELL' && heldQty === 0) {
+              <div class="ssi-no-hold">No tienes posición en {{ selectedStock.symbol }}</div>
+            }
+          </div>
+        }
+
+        <!-- Quantity -->
+        <div class="field">
+          <label>Cantidad de acciones</label>
+          <div class="qty-row">
+            <button class="qty-btn" (click)="orderQuantity = orderQuantity > 1 ? orderQuantity-1 : 1">−</button>
+            <input class="pt-input qty-input" type="number" [(ngModel)]="orderQuantity" min="1" step="1">
+            <button class="qty-btn" (click)="orderQuantity = orderQuantity + 1">+</button>
+          </div>
+        </div>
+
+        <!-- Total preview -->
+        @if (selectedStock) {
+          <div class="order-preview" [class.preview--buy]="orderType==='BUY'" [class.preview--sell]="orderType==='SELL'">
+            <div class="preview-row">
+              <span>Mid (referencia)</span>
+              <span>Bs {{ midPriceBs.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:4}) }}</span>
+            </div>
+            <div class="preview-row preview-row--small slippage-row" [class.slip-warn]="slippagePct >= 1">
+              <span matTooltip="Slippage estimado por liquidez (sqrt model). En BVC, órdenes grandes pagan precios progresivamente peores.">
+                Slippage simulado
+              </span>
+              <span>{{ slippagePct.toFixed(2) }}% · Bs {{ executedPriceBs.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:4}) }}</span>
+            </div>
+            @if (slippageCostUsd > 0.01) {
+              <div class="preview-row preview-row--small">
+                <span>Costo de slippage</span>
+                <span>{{ formatUsd(slippageCostUsd) }}</span>
+              </div>
+            }
+            <div class="preview-row">
+              <span>Total a {{ orderType === 'BUY' ? 'pagar' : 'recibir' }} (con slippage)</span>
+              <strong>{{ formatUsd(orderTotal) }}</strong>
+            </div>
+            @if (orderType === 'BUY') {
+              <div class="preview-row preview-row--small">
+                <span>Efectivo restante</span>
+                <span [class.insufficient]="!canBuy">
+                  {{ formatUsd(portfolio!.virtual_balance_usd - orderTotal) }}
+                </span>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Notes -->
+        <div class="field">
+          <label>Notas (opcional)</label>
+          <input class="pt-input" [(ngModel)]="orderNotes" placeholder="Ej: Compra por soporte técnico…" maxlength="200">
+        </div>
+
+        <!-- Submit -->
+        <button class="btn-order" [class.btn-order--buy]="orderType==='BUY'" [class.btn-order--sell]="orderType==='SELL'"
+                [disabled]="!selectedStock || submitting || (orderType==='SELL' && heldQty < orderQuantity) || !canBuy"
+                (click)="submitOrder()">
+          @if (submitting) {
+            <mat-spinner diameter="20" strokeWidth="2"></mat-spinner>
+          } @else {
+            <mat-icon>{{ orderType === 'BUY' ? 'add_shopping_cart' : 'sell' }}</mat-icon>
+            {{ orderType === 'BUY' ? 'Ejecutar Compra' : 'Ejecutar Venta' }}
+          }
+        </button>
+
+        @if (orderType === 'SELL' && selectedStock && heldQty < orderQuantity) {
+          <p class="order-error">Solo tienes {{ heldQty }} accs. de {{ selectedStock.symbol }}</p>
+        }
+        @if (orderType === 'BUY' && !canBuy && selectedStock) {
+          <p class="order-error">Saldo insuficiente (necesitas {{ formatUsd(orderTotal) }})</p>
+        }
+      </div>
+
+      <!-- Holdings panel -->
+      <div class="panel panel--holdings">
+        <h2 class="panel-title"><mat-icon>account_balance_wallet</mat-icon> Posiciones Abiertas</h2>
+
+        @if (portfolio.holdings.length === 0) {
+          <div class="empty-state">
+            <mat-icon>inbox</mat-icon>
+            <p>Sin posiciones. Haz tu primera compra simulada.</p>
+          </div>
+        } @else {
+          <div class="holdings-table">
+            <div class="ht-head">
+              <span>Acción</span>
+              <span class="right">Cant.</span>
+              <span class="right">Precio</span>
+              <span class="right">Valor</span>
+              <span class="right">P&L</span>
+            </div>
+            @for (h of portfolio.holdings; track h.symbol) {
+              <div class="ht-row">
+                <div class="ht-stock">
+                  <span class="ht-symbol">{{ h.symbol }}</span>
+                  <span class="ht-name">{{ h.name }}</span>
+                </div>
+                <span class="ht-cell right">{{ h.quantity }}</span>
+                <span class="ht-cell right">
+                  ${{ h.current_price_usd.toFixed(4) }}
+                  <span class="ht-avg">avg ${{ h.avg_cost_usd.toFixed(4) }}</span>
+                </span>
+                <span class="ht-cell right">{{ formatUsd(h.current_value_usd) }}</span>
+                <span class="ht-cell right" [class.up]="h.pnl_usd >= 0" [class.dn]="h.pnl_usd < 0">
+                  {{ h.pnl_usd >= 0 ? '+' : '' }}{{ formatUsd(h.pnl_usd) }}
+                  <span class="ht-pct">{{ formatPct(h.pnl_pct) }}</span>
+                </span>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- ── Transaction history ──────────────────────────────────────────────── -->
+    <div class="history-section">
+      <button class="history-toggle" (click)="toggleHistory()">
+        <mat-icon>{{ showHistory ? 'expand_less' : 'expand_more' }}</mat-icon>
+        Historial de Operaciones
+        @if (history.length > 0) {
+          <span class="history-count">{{ history.length }}</span>
+        }
+      </button>
+
+      @if (showHistory) {
+        @if (historyLoading) {
+          <div class="history-loading"><mat-spinner diameter="30" strokeWidth="2"></mat-spinner></div>
+        } @else if (history.length === 0) {
+          <div class="empty-state"><p>Sin operaciones registradas aún.</p></div>
+        } @else {
+          <div class="history-table">
+            <div class="hist-head">
+              <span>Fecha</span>
+              <span>Tipo</span>
+              <span>Símbolo</span>
+              <span class="right">Cant.</span>
+              <span class="right">Precio USD</span>
+              <span class="right">Total USD</span>
+              <span>Notas</span>
+            </div>
+            @for (tx of history; track tx.id) {
+              <div class="hist-row">
+                <span class="hist-date">{{ tx.executed_at | date:'dd/MM/yy HH:mm' }}</span>
+                <span class="hist-type" [class.buy]="tx.order_type==='BUY'" [class.sell]="tx.order_type==='SELL'">
+                  {{ tx.order_type === 'BUY' ? 'COMPRA' : 'VENTA' }}
+                </span>
+                <span class="hist-symbol">{{ tx.symbol }}</span>
+                <span class="right">{{ tx.quantity }}</span>
+                <span class="right">${{ tx.price_usd.toFixed(4) }}</span>
+                <span class="right">{{ formatUsd(tx.total_usd) }}</span>
+                <span class="hist-notes">{{ tx.notes || '—' }}</span>
+              </div>
+            }
+          </div>
+        }
+      }
+    </div>
+
+  }
+</div>

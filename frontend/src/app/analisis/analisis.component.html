@@ -1,0 +1,2002 @@
+<!-- Mobile top bar -->
+<div class="mobile-topbar">
+  <a class="mobile-back-btn" routerLink="/dashboard">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+  </a>
+  <span class="mobile-topbar-title">Análisis de Mercado</span>
+</div>
+
+<div class="analisis-container">
+
+  <!-- Header -->
+  <header class="an-header">
+    <a routerLink="/dashboard" class="back-btn">
+      <mat-icon>arrow_back</mat-icon>
+    </a>
+    <div class="an-header__title">
+      <span class="eyebrow">Bolsa de Caracas</span>
+      <h1>Análisis de Mercado</h1>
+    </div>
+  </header>
+
+  <!-- Tab switcher -->
+  <div class="tab-row-wrap">
+  <div class="tab-row">
+    <button class="tab-btn" [class.tab-btn--active]="activeTab === 'season'" (click)="onTabChange('season')">
+      <mat-icon>calendar_month</mat-icon><span>Estacionalidad</span>
+    </button>
+    <button class="tab-btn" [class.tab-btn--active]="activeTab === 'backtest'" (click)="onTabChange('backtest')">
+      <mat-icon>history</mat-icon><span>Backtesting</span>
+    </button>
+    <button class="tab-btn" [class.tab-btn--active]="activeTab === 'advanced'" (click)="onTabChange('advanced')">
+      <mat-icon>analytics</mat-icon><span>Métricas Avanzadas</span>
+    </button>
+    <button class="tab-btn" [class.tab-btn--active]="activeTab === 'liquidity'" (click)="onTabChange('liquidity')">
+      <mat-icon>water_drop</mat-icon><span>Liquidez</span>
+    </button>
+    <button class="tab-btn" [class.tab-btn--active]="activeTab === 'correlation'" (click)="onTabChange('correlation')">
+      <mat-icon>grid_on</mat-icon><span>Correlación</span>
+    </button>
+    <button class="tab-btn" [class.tab-btn--active]="activeTab === 'sharpe'" (click)="onTabChange('sharpe')">
+      <mat-icon>speed</mat-icon><span>Sharpe</span>
+    </button>
+    <button class="tab-btn" [class.tab-btn--active]="activeTab === 'heatmap'" (click)="onTabChange('heatmap')">
+      <mat-icon>grid_on</mat-icon><span>Heatmap Velas</span>
+    </button>
+    <button class="tab-btn" [class.tab-btn--active]="activeTab === 'cointeg'" (click)="onTabChange('cointeg')">
+      <mat-icon>device_hub</mat-icon><span>Cointegración</span>
+    </button>
+    <button class="tab-btn" [class.tab-btn--active]="activeTab === 'walkfwd'" (click)="onTabChange('walkfwd')">
+      <mat-icon>model_training</mat-icon><span>Walk-Forward</span>
+    </button>
+    <button class="tab-btn" [class.tab-btn--active]="activeTab === 'rollingcorr'" (click)="onTabChange('rollingcorr')">
+      <mat-icon>timeline</mat-icon><span>Corr. Rodante</span>
+    </button>
+    <button class="tab-btn" [class.tab-btn--active]="activeTab === 'smartbeta'" (click)="onTabChange('smartbeta')">
+      <mat-icon>auto_fix_high</mat-icon><span>Smart Beta</span>
+    </button>
+    <button class="tab-btn" [class.tab-btn--active]="activeTab === 'stress'" (click)="onTabChange('stress')">
+      <mat-icon>crisis_alert</mat-icon><span>Stress Test</span>
+    </button>
+    <button class="tab-btn" [class.tab-btn--active]="activeTab === 'wti'" (click)="onTabChange('wti')">
+      <mat-icon>oil_barrel</mat-icon><span>Corr. WTI</span>
+    </button>
+    <button class="tab-btn" [class.tab-btn--active]="activeTab === 'garch'" (click)="onTabChange('garch')">
+      <mat-icon>blur_on</mat-icon><span>GARCH Vol.</span>
+    </button>
+    <button class="tab-btn" [class.tab-btn--active]="activeTab === 'mlpredict'" (click)="onTabChange('mlpredict')">
+      <mat-icon>psychology</mat-icon><span>ML Predicción</span>
+    </button>
+    <button class="tab-btn" [class.tab-btn--active]="activeTab === 'frontier'" (click)="onTabChange('frontier')">
+      <mat-icon>scatter_plot</mat-icon><span>Frontera Eficiente</span>
+    </button>
+    <button class="tab-btn" [class.tab-btn--active]="activeTab === 'cvar'" (click)="onTabChange('cvar')">
+      <mat-icon>crisis_alert</mat-icon><span>CVaR / ES</span>
+    </button>
+    <button class="tab-btn" [class.tab-btn--active]="activeTab === 'cape'" (click)="onTabChange('cape')">
+      <mat-icon>price_check</mat-icon><span>CAPE / PE</span>
+    </button>
+    <button class="tab-btn" [class.tab-btn--active]="activeTab === 'monthend'" (click)="onTabChange('monthend')">
+      <mat-icon>event</mat-icon><span>Fin de Mes</span>
+    </button>
+    <button class="tab-btn" [class.tab-btn--active]="activeTab === 'breakout'" (click)="onTabChange('breakout')">
+      <mat-icon>trending_up</mat-icon><span>Breakouts</span>
+    </button>
+    <button class="tab-btn" [class.tab-btn--active]="activeTab === 'whatif'" (click)="onTabChange('whatif')">
+      <mat-icon>compare_arrows</mat-icon><span>What-If</span>
+    </button>
+    <button class="tab-btn" [class.tab-btn--active]="activeTab === 'bias'" (click)="onTabChange('bias')">
+      <mat-icon>psychology</mat-icon><span>Sesgo</span>
+    </button>
+    <button class="tab-btn" [class.tab-btn--active]="activeTab === 'patterns'" (click)="onTabChange('patterns')">
+      <mat-icon>candlestick_chart</mat-icon><span>Patrones</span>
+    </button>
+  </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ ESTACIONALIDAD -->
+  @if (activeTab === 'season') {
+  <section class="tool-section">
+    <div class="tool-intro">
+      <div class="tool-intro__icon">📅</div>
+      <div>
+        <h2>Análisis de Estacionalidad</h2>
+        <p>¿En qué meses históricamente sube o baja una acción? Calcula el retorno promedio de cada mes y la tasa de acierto usando todos los datos históricos de la BVC.</p>
+      </div>
+    </div>
+
+    <div class="ctrl-row">
+      <div class="ctrl-field">
+        <label>Acción</label>
+        <select [(ngModel)]="seasonSymbol" class="ctrl-select">
+          <option value="">Seleccionar símbolo…</option>
+          @for (s of stocks; track s.symbol) {
+            <option [value]="s.symbol">{{ s.symbol }} — {{ s.name }}</option>
+          }
+        </select>
+      </div>
+      <button class="run-btn" (click)="runSeasonality()" [disabled]="!seasonSymbol || seasonLoading">
+        @if (seasonLoading) { <mat-spinner diameter="18" strokeWidth="3"></mat-spinner> }
+        @else { <mat-icon>bar_chart</mat-icon> }
+        <span>{{ seasonLoading ? 'Analizando…' : 'Analizar' }}</span>
+      </button>
+    </div>
+
+    @if (seasonError) { <div class="tool-error"><mat-icon>error_outline</mat-icon><span>{{ seasonError }}</span></div> }
+
+    @if (seasonResult) {
+      <div class="season-summary">
+        <div class="ss-card ss-card--meta">
+          <span class="ss-label">Símbolo</span>
+          <span class="ss-val">{{ seasonResult.symbol }}</span>
+          <span class="ss-sub">{{ seasonResult.name }}</span>
+        </div>
+        <div class="ss-card ss-card--meta">
+          <span class="ss-label">Años de datos</span>
+          <span class="ss-val">{{ seasonResult.data_years }}</span>
+          <span class="ss-sub">en la BVC</span>
+        </div>
+        <div class="ss-card ss-card--up">
+          <span class="ss-label">Mejor mes</span>
+          <span class="ss-val">{{ seasonResult.best_month.month_name }}</span>
+          <span class="ss-sub txt-up">+{{ seasonResult.best_month.avg_return_pct?.toFixed(2) }}% promedio</span>
+        </div>
+        <div class="ss-card ss-card--dn">
+          <span class="ss-label">Peor mes</span>
+          <span class="ss-val">{{ seasonResult.worst_month.month_name }}</span>
+          <span class="ss-sub txt-dn">{{ seasonResult.worst_month.avg_return_pct?.toFixed(2) }}% promedio</span>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-title">Retorno promedio mensual histórico — {{ seasonResult.symbol }}</div>
+        <div class="chart-wrap"><canvas #seasonChart></canvas></div>
+      </div>
+
+      <div class="month-grid">
+        @for (m of seasonResult.seasonality; track m.month) {
+          <div class="month-card" [class.month-up]="(m.avg_return_pct ?? 0) > 0" [class.month-dn]="(m.avg_return_pct ?? 0) < 0" [class.month-neutral]="m.avg_return_pct == null">
+            <div class="mc-name">{{ m.month_name }}</div>
+            @if (m.avg_return_pct != null) {
+              <div class="mc-return" [class]="seasonColor(m.avg_return_pct)">{{ m.avg_return_pct >= 0 ? '+' : '' }}{{ m.avg_return_pct.toFixed(2) }}%</div>
+              <div class="mc-bar-track">
+                <div class="mc-bar-fill" [class.bar-up]="m.avg_return_pct >= 0" [class.bar-dn]="m.avg_return_pct < 0" [style.width.%]="barWidth(m.avg_return_pct, seasonMax)"></div>
+              </div>
+              <div class="mc-stats">
+                <span class="mc-wr">{{ m.win_rate?.toFixed(0) }}% wins</span>
+                <span class="mc-years">{{ m.positive_years }}↑ {{ m.negative_years }}↓</span>
+              </div>
+              <div class="mc-range">
+                <span class="txt-up">▲{{ m.best_year_pct?.toFixed(1) }}%</span>
+                <span class="txt-dn">▼{{ m.worst_year_pct?.toFixed(1) }}%</span>
+              </div>
+            } @else {
+              <div class="mc-nodata">Sin datos</div>
+            }
+          </div>
+        }
+      </div>
+    }
+  </section>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════ BACKTESTING -->
+  @if (activeTab === 'backtest') {
+  <section class="tool-section">
+    <div class="tool-intro">
+      <div class="tool-intro__icon">⏪</div>
+      <div>
+        <h2>Backtesting de Estrategia</h2>
+        <p>Simula qué hubiera pasado si hubieras invertido una cantidad en Bs en una acción hace N meses. Los resultados incluyen conversión a USD con las tasas BCV de cada momento.</p>
+      </div>
+    </div>
+
+    <div class="ctrl-row ctrl-row--bt">
+      <div class="ctrl-field">
+        <label>Acción</label>
+        <select [(ngModel)]="btSymbol" class="ctrl-select">
+          <option value="">Seleccionar símbolo…</option>
+          @for (s of stocks; track s.symbol) {
+            <option [value]="s.symbol">{{ s.symbol }} — {{ s.name }}</option>
+          }
+        </select>
+      </div>
+      <div class="ctrl-field ctrl-field--sm">
+        <label>Meses atrás</label>
+        <input type="number" [(ngModel)]="btMonths" min="1" max="120" class="ctrl-input" />
+      </div>
+      <div class="ctrl-field ctrl-field--sm">
+        <label>Monto (Bs)</label>
+        <input type="number" [(ngModel)]="btAmount" min="1" class="ctrl-input" />
+      </div>
+      <button class="run-btn" (click)="runBacktest()" [disabled]="!btSymbol || btLoading">
+        @if (btLoading) { <mat-spinner diameter="18" strokeWidth="3"></mat-spinner> }
+        @else { <mat-icon>play_circle</mat-icon> }
+        <span>{{ btLoading ? 'Simulando…' : 'Simular' }}</span>
+      </button>
+    </div>
+
+    @if (btError) { <div class="tool-error"><mat-icon>error_outline</mat-icon><span>{{ btError }}</span></div> }
+
+    @if (btResult) {
+      <div class="bt-headline" [class.bt-up]="btResult.return_pct >= 0" [class.bt-dn]="btResult.return_pct < 0">
+        <div class="bt-hl-left">
+          <span class="bt-hl-symbol">{{ btResult.symbol }}</span>
+          <span class="bt-hl-name">{{ btResult.name }}</span>
+          <span class="bt-hl-period">{{ btResult.entry_date | date:'MMM yyyy' }} → {{ btResult.exit_date | date:'MMM yyyy' }} ({{ btMonths }} meses)</span>
+        </div>
+        <div class="bt-hl-right">
+          <span class="bt-hl-pct" [class.txt-up]="btResult.return_pct >= 0" [class.txt-dn]="btResult.return_pct < 0">{{ btResult.return_pct >= 0 ? '+' : '' }}{{ btResult.return_pct | number:'1.2-2' }}%</span>
+          <span class="bt-hl-sub">en Bs</span>
+        </div>
+      </div>
+
+      <div class="bt-kpis">
+        <div class="bt-kpi">
+          <span class="bt-kpi-label">Invertido</span>
+          <span class="bt-kpi-val">Bs {{ btResult.invested_bs | number:'1.0-0' }}</span>
+          <span class="bt-kpi-sub">${{ btResult.invested_usd | number:'1.2-2' }}</span>
+        </div>
+        <div class="bt-kpi">
+          <span class="bt-kpi-label">Valor Actual</span>
+          <span class="bt-kpi-val">Bs {{ btResult.current_value_bs | number:'1.0-0' }}</span>
+          <span class="bt-kpi-sub">${{ btResult.current_value_usd | number:'1.2-2' }}</span>
+        </div>
+        <div class="bt-kpi" [class.bt-kpi--up]="btResult.gain_bs >= 0" [class.bt-kpi--dn]="btResult.gain_bs < 0">
+          <span class="bt-kpi-label">Ganancia / Pérdida Bs</span>
+          <span class="bt-kpi-val">{{ btResult.gain_bs >= 0 ? '+' : '' }}Bs {{ btResult.gain_bs | number:'1.0-0' }}</span>
+          <span class="bt-kpi-sub">{{ btResult.return_pct >= 0 ? '+' : '' }}{{ btResult.return_pct | number:'1.2-2' }}%</span>
+        </div>
+        <div class="bt-kpi" [class.bt-kpi--up]="btResult.gain_usd >= 0" [class.bt-kpi--dn]="btResult.gain_usd < 0">
+          <span class="bt-kpi-label">Ganancia / Pérdida USD</span>
+          <span class="bt-kpi-val">{{ btResult.gain_usd >= 0 ? '+' : '' }}${{ btResult.gain_usd | number:'1.2-2' }}</span>
+          <span class="bt-kpi-sub">{{ btResult.return_usd_pct >= 0 ? '+' : '' }}{{ btResult.return_usd_pct | number:'1.2-2' }}%</span>
+        </div>
+        <div class="bt-kpi">
+          <span class="bt-kpi-label">Acciones compradas</span>
+          <span class="bt-kpi-val">{{ btResult.shares_bought | number }}</span>
+          <span class="bt-kpi-sub">a Bs {{ btResult.entry_price_bs | number:'1.4-4' }} c/u</span>
+        </div>
+        <div class="bt-kpi">
+          <span class="bt-kpi-label">Precio actual</span>
+          <span class="bt-kpi-val">Bs {{ btResult.exit_price_bs | number:'1.4-4' }}</span>
+          <span class="bt-kpi-sub">BCV: {{ btResult.bcv_exit | number:'1.2-2' }}</span>
+        </div>
+      </div>
+
+      <!-- Live real-time overlay for backtest -->
+      @if (liveBtValue) {
+        <div class="bt-live-banner" [class.bt-live--up]="liveBtValue.gainBs >= 0" [class.bt-live--dn]="liveBtValue.gainBs < 0">
+          <span class="bt-live-dot"></span>
+          <strong>EN VIVO</strong>
+          <span>Precio actual BVC: <b>Bs {{ liveBtValue.priceBS | number:'1.2-2' }}</b></span>
+          <span class="bt-live-sep">·</span>
+          <span>Valor: <b>Bs {{ liveBtValue.valueBs | number:'1.0-0' }}</b> / <b>${{ liveBtValue.valueUsd | number:'1.2-2' }}</b></span>
+          <span class="bt-live-sep">·</span>
+          <span [class.txt-up]="liveBtValue.gainBs >= 0" [class.txt-dn]="liveBtValue.gainBs < 0">
+            {{ liveBtValue.gainBs >= 0 ? '+' : '' }}Bs {{ liveBtValue.gainBs | number:'1.0-0' }}
+            ({{ liveBtValue.returnPct >= 0 ? '+' : '' }}{{ liveBtValue.returnPct | number:'1.2-2' }}%)
+          </span>
+        </div>
+      }
+
+      <div class="chart-card">
+        <div class="chart-title">Evolución del precio — {{ btResult.symbol }} (desde entrada)</div>
+        <div class="chart-wrap chart-wrap--bt"><canvas #btChart></canvas></div>
+      </div>
+
+      <div class="bt-note">
+        <mat-icon>info</mat-icon>
+        <span>Conversión USD calculada con BCV al momento de entrada ({{ btResult.bcv_entry | number:'1.2-2' }} Bs/$) y salida ({{ btResult.bcv_exit | number:'1.2-2' }} Bs/$).</span>
+      </div>
+    }
+  </section>
+  }
+
+  <!-- ═══════════════════════════════════════════════════ MÉTRICAS AVANZADAS -->
+  @if (activeTab === 'advanced') {
+  <section class="tool-section">
+    <div class="tool-intro">
+      <div class="tool-intro__icon">📊</div>
+      <div>
+        <h2>Métricas Avanzadas</h2>
+        <p>Drawdown máximo, CAGR, Sortino, VaR 95%, Calmar Ratio y heatmap de retornos mensuales por año. Análisis completo del riesgo-retorno histórico de cada acción.</p>
+      </div>
+    </div>
+
+    <div class="ctrl-row">
+      <div class="ctrl-field">
+        <label>Acción</label>
+        <select [(ngModel)]="advSymbol" class="ctrl-select">
+          <option value="">Seleccionar símbolo…</option>
+          @for (s of stocks; track s.symbol) {
+            <option [value]="s.symbol">{{ s.symbol }} — {{ s.name }}</option>
+          }
+        </select>
+      </div>
+      <button class="run-btn" (click)="runAdvancedMetrics()" [disabled]="!advSymbol || advLoading">
+        @if (advLoading) { <mat-spinner diameter="18" strokeWidth="3"></mat-spinner> }
+        @else { <mat-icon>analytics</mat-icon> }
+        <span>{{ advLoading ? 'Calculando…' : 'Calcular' }}</span>
+      </button>
+    </div>
+
+    @if (advError) { <div class="tool-error"><mat-icon>error_outline</mat-icon><span>{{ advError }}</span></div> }
+
+    @if (advResult) {
+      <!-- KPI Grid -->
+      <div class="adv-kpi-grid">
+        <div class="adv-kpi-card" matTooltip="Ganancia o pérdida total desde el primer precio registrado hasta hoy. No tiene en cuenta el tiempo — 100% en 10 años es menos impresionante que 100% en 2 años." matTooltipPosition="above">
+          <span class="adv-kpi-label">Retorno Total</span>
+          <span class="adv-kpi-val" [class.txt-up]="advResult.total_return_pct >= 0" [class.txt-dn]="advResult.total_return_pct < 0">
+            {{ advResult.total_return_pct >= 0 ? '+' : '' }}{{ advResult.total_return_pct | number:'1.2-2' }}%
+          </span>
+          <span class="adv-kpi-sub">{{ advResult.first_date }} → {{ advResult.last_date }}</span>
+        </div>
+        <div class="adv-kpi-card" matTooltip="Compound Annual Growth Rate: retorno anualizado equivalente considerando el efecto del interés compuesto. La métrica más justa para comparar inversiones de distinta duración." matTooltipPosition="above">
+          <span class="adv-kpi-label">CAGR</span>
+          <span class="adv-kpi-val" [class.txt-up]="advResult.cagr_pct >= 0" [class.txt-dn]="advResult.cagr_pct < 0">
+            {{ advResult.cagr_pct >= 0 ? '+' : '' }}{{ advResult.cagr_pct | number:'1.2-2' }}%
+          </span>
+          <span class="adv-kpi-sub">Tasa de crecimiento anual</span>
+        </div>
+        <div class="adv-kpi-card adv-kpi-card--danger" matTooltip="La mayor caída desde un máximo histórico hasta el mínimo siguiente, antes de que el precio se recuperara. Mide el peor escenario posible que un inversor hubiera experimentado." matTooltipPosition="above">
+          <span class="adv-kpi-label">Max Drawdown</span>
+          <span class="adv-kpi-val txt-dn">{{ advResult.max_drawdown_pct | number:'1.2-2' }}%</span>
+          <span class="adv-kpi-sub">Pico: {{ advResult.max_drawdown_peak_date | date:'MMM yy' }} → Valle: {{ advResult.max_drawdown_trough_date | date:'MMM yy' }}</span>
+        </div>
+        <div class="adv-kpi-card" matTooltip="Desviación estándar de los retornos mensuales, anualizada. Cuanto más alta, más incierto es el precio de la acción. Acciones BVC suelen tener alta volatilidad por baja liquidez." matTooltipPosition="above">
+          <span class="adv-kpi-label">Volatilidad Anual</span>
+          <span class="adv-kpi-val">{{ advResult.vol_annual_pct | number:'1.2-2' }}%</span>
+          <span class="adv-kpi-sub">{{ advResult.vol_monthly_pct | number:'1.2-2' }}% mensual</span>
+        </div>
+        <div class="adv-kpi-card" matTooltip="Value at Risk al 95%: la pérdida mensual que NO se espera superar el 95% de los meses. Por ejemplo, VaR 95% = -8% significa que hay solo un 5% de probabilidad de perder más del 8% en un mes." matTooltipPosition="above">
+          <span class="adv-kpi-label">VaR 95% (mensual)</span>
+          <span class="adv-kpi-val txt-dn">{{ advResult.var_95_monthly_pct | number:'1.2-2' }}%</span>
+          <span class="adv-kpi-sub">Pérdida máx. esperada 95%</span>
+        </div>
+        <div class="adv-kpi-card" [class.adv-kpi-card--good]="(advResult.sortino_ratio ?? -1) >= 1"
+             matTooltip="Como el Sharpe pero solo penaliza la volatilidad negativa (bajadas). Es más justo porque las subidas bruscas no son un 'riesgo' real. Sortino &gt; 1 es bueno, &gt; 2 es excelente." matTooltipPosition="above">
+          <span class="adv-kpi-label">Sortino Ratio</span>
+          <span class="adv-kpi-val" [class]="sharpeClass(advResult.sortino_ratio)">
+            {{ advResult.sortino_ratio != null ? (advResult.sortino_ratio | number:'1.2-2') : 'N/D' }}
+          </span>
+          <span class="adv-kpi-sub">{{ sortinoLabel(advResult.sortino_ratio) }}</span>
+        </div>
+        <div class="adv-kpi-card" [class.adv-kpi-card--good]="(advResult.calmar_ratio ?? -1) >= 1"
+             matTooltip="CAGR dividido entre el valor absoluto del Max Drawdown. Mide cuánto retorno anual obtienes por cada punto de caída máxima soportada. Calmar &gt; 1 es bueno." matTooltipPosition="above">
+          <span class="adv-kpi-label">Calmar Ratio</span>
+          <span class="adv-kpi-val" [class.txt-up]="(advResult.calmar_ratio ?? -1) >= 1" [class.txt-warn]="(advResult.calmar_ratio ?? -1) >= 0 && (advResult.calmar_ratio ?? -1) < 1" [class.txt-dn]="(advResult.calmar_ratio ?? -1) < 0">
+            {{ advResult.calmar_ratio != null ? (advResult.calmar_ratio | number:'1.2-2') : 'N/D' }}
+          </span>
+          <span class="adv-kpi-sub">CAGR / |Max Drawdown|</span>
+        </div>
+        <div class="adv-kpi-card" matTooltip="Años de historial de precios disponibles en la base de datos para esta acción. Más datos = estadísticas más confiables. Con menos de 2 años los ratios pueden ser poco representativos." matTooltipPosition="above">
+          <span class="adv-kpi-label">Datos disponibles</span>
+          <span class="adv-kpi-val">{{ advResult.data_years | number:'1.1-1' }} años</span>
+          <span class="adv-kpi-sub">Bs {{ advResult.first_price_bs | number:'1.2-2' }} → {{ advResult.last_price_bs | number:'1.2-2' }}</span>
+        </div>
+      </div>
+
+      <!-- Monthly returns chart -->
+      <div class="chart-card">
+        <div class="chart-title">Retornos mensuales históricos — {{ advResult.symbol }}</div>
+        <div class="chart-wrap"><canvas #advChart></canvas></div>
+      </div>
+
+      <!-- Drawdown chart -->
+      <div class="chart-card">
+        <div class="chart-title">Drawdown histórico (caída desde máximos) — {{ advResult.symbol }}</div>
+        <div class="chart-wrap chart-wrap--bt"><canvas #ddChart></canvas></div>
+      </div>
+
+      <!-- Heatmap toggle -->
+      <div class="heatmap-section">
+        <button class="run-btn run-btn--outline" (click)="showHeatmap = !showHeatmap">
+          <mat-icon>{{ showHeatmap ? 'visibility_off' : 'grid_view' }}</mat-icon>
+          <span>{{ showHeatmap ? 'Ocultar Heatmap' : 'Ver Heatmap Anual' }}</span>
+        </button>
+
+        @if (showHeatmap) {
+          <div class="heatmap-wrap">
+            <div class="hm-title">Heatmap de retornos mensuales — {{ advResult.symbol }}</div>
+            <div class="hm-legend">
+              <span class="hm-cell hm-strong-dn">≤-10%</span>
+              <span class="hm-cell hm-dn">-3% a -10%</span>
+              <span class="hm-cell hm-weak-dn">0% a -3%</span>
+              <span class="hm-cell hm-weak-up">0% a +3%</span>
+              <span class="hm-cell hm-up">+3% a +10%</span>
+              <span class="hm-cell hm-strong-up">≥+10%</span>
+              <span class="hm-cell hm-null">Sin datos</span>
+            </div>
+            <div class="hm-table-wrap">
+              <table class="hm-table">
+                <thead>
+                  <tr>
+                    <th>Año</th>
+                    @for (m of advResult.heatmap_months; track m) { <th>{{ m }}</th> }
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of advResult.heatmap; track row.year) {
+                    <tr>
+                      <td class="hm-year">{{ row.year }}</td>
+                      @for (cell of row.months; track cell.month) {
+                        <td class="hm-cell" [class]="heatmapColor(cell.return_pct)" [matTooltip]="cell.return_pct != null ? (cell.return_pct >= 0 ? '+' : '') + cell.return_pct.toFixed(2) + '%' : 'Sin datos'">
+                          {{ cell.return_pct != null ? (cell.return_pct >= 0 ? '+' : '') + cell.return_pct.toFixed(1) + '%' : '—' }}
+                        </td>
+                      }
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </section>
+  }
+
+  <!-- ═══════════════════════════════════════════════ SCORE DE LIQUIDEZ -->
+  @if (activeTab === 'liquidity') {
+  <section class="tool-section">
+    <div class="tool-intro">
+      <div class="tool-intro__icon">💧</div>
+      <div>
+        <h2>Score de Liquidez</h2>
+        <p>Ranking de todas las acciones BVC por volumen promedio diario (últimos 90 días). Un score alto significa que puedes entrar y salir fácilmente sin mover el precio.</p>
+      </div>
+    </div>
+    @if (liqLoading) { <div class="tool-loading"><mat-spinner diameter="32" strokeWidth="3"></mat-spinner><span>Calculando liquidez…</span></div> }
+    @if (liqError)   { <div class="tool-error"><mat-icon>error_outline</mat-icon><span>{{ liqError }}</span></div> }
+    @if (liqResult) {
+      <div class="liq-table-wrap">
+        <table class="liq-table">
+          <thead>
+            <tr>
+              <th>#</th><th>Símbolo</th>
+              <th class="right" matTooltip="Score de 0–100 calculado como: (volumen promedio / max_volumen) × 50 + (días activos / 90) × 50. 100 = máxima liquidez en BVC." matTooltipPosition="above">Score</th>
+              <th class="right" matTooltip="Promedio de acciones negociadas por día en los últimos 90 días hábiles. Volúmenes mayores facilitan entrar y salir sin impactar el precio." matTooltipPosition="above">Volumen Prom.</th>
+              <th class="right" matTooltip="Días de los últimos 90 en que la acción registró al menos una transacción. Menos de 30 días indica baja actividad — riesgo de no poder vender cuando quieras." matTooltipPosition="above">Días (90d)</th>
+              <th class="right">Precio Bs</th>
+              <th class="center" matTooltip="Alta (score ≥ 70): puedes operar con confianza. Media (35–69): ten paciencia. Baja (&lt;35): difícil encontrar contraparte — cuidado con posiciones grandes." matTooltipPosition="above">Liquidez</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (s of liqResult.stocks; track s.symbol; let i = $index) {
+              <tr>
+                <td class="rank-cell muted">{{ i + 1 }}</td>
+                <td><strong>{{ s.symbol }}</strong><span class="sym-name">{{ s.name }}</span></td>
+                <td class="right">
+                  <div class="score-bar-wrap">
+                    <div class="score-bar-track"><div class="score-bar-fill" [class]="scoreColor(s.liquidity_score)" [style.width.%]="s.liquidity_score"></div></div>
+                    <span class="score-val">{{ s.liquidity_score | number:'1.0-0' }}</span>
+                  </div>
+                </td>
+                <td class="right mono">{{ s.avg_volume | number:'1.0-0' }}</td>
+                <td class="right mono">{{ s.trading_days_90d }}</td>
+                <td class="right mono">{{ s.last_price_bs ? (s.last_price_bs | number:'1.4-4') : '—' }}</td>
+                <td class="center"><span class="liq-badge" [class]="scoreColor(s.liquidity_score)">{{ scoreLabel(s.liquidity_score) }}</span></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+  }
+
+  <!-- ═══════════════════════════════════════════════ CORRELACIÓN -->
+  @if (activeTab === 'correlation') {
+  <section class="tool-section">
+    <div class="tool-intro">
+      <div class="tool-intro__icon">🔗</div>
+      <div>
+        <h2>Correlación entre Acciones</h2>
+        <p>Matriz de correlación Pearson entre las acciones usando retornos mensuales. Cerca de +1 se mueven juntos, cerca de -1 en sentido opuesto. Útil para diversificar.</p>
+      </div>
+    </div>
+
+    <div class="ctrl-row">
+      <div class="ctrl-field ctrl-field--sm">
+        <label>Período</label>
+        <select [(ngModel)]="corrMonths" (change)="runCorrelation()" class="ctrl-select">
+          <option [ngValue]="0">Histórico completo</option>
+          <option [ngValue]="3">Últimos 3 meses</option>
+          <option [ngValue]="6">Últimos 6 meses</option>
+          <option [ngValue]="12">Último 1 año</option>
+          <option [ngValue]="24">Últimos 2 años</option>
+          <option [ngValue]="60">Últimos 5 años</option>
+        </select>
+      </div>
+      <button class="run-btn" (click)="runCorrelation()" [disabled]="corrLoading">
+        @if (corrLoading) { <mat-spinner diameter="18" strokeWidth="3"></mat-spinner> }
+        @else { <mat-icon>refresh</mat-icon> }
+        <span>{{ corrLoading ? 'Calculando…' : 'Refrescar' }}</span>
+      </button>
+    </div>
+    @if (corrLoading) { <div class="tool-loading"><mat-spinner diameter="32" strokeWidth="3"></mat-spinner><span>Calculando correlaciones…</span></div> }
+    @if (corrError)   { <div class="tool-error"><mat-icon>error_outline</mat-icon><span>{{ corrError }}</span></div> }
+    @if (corrResult && corrResult.symbols.length > 0) {
+      <div class="corr-meta">{{ corrResult.note }}</div>
+      <div class="corr-table-wrap">
+        <table class="corr-table">
+          <thead>
+            <tr>
+              <th></th>
+              @for (symObj of corrResult.symbols; track symObj.symbol) { <th [title]="symObj.name">{{ symObj.symbol }}</th> }
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of corrResult.matrix; track $index; let ri = $index) {
+              <tr>
+                <td class="corr-label" [title]="corrResult.symbols[ri].name">{{ corrResult.symbols[ri].symbol }}</td>
+                @for (val of row; track $index; let ci = $index) {
+                  <td class="corr-cell" [class]="corrClass(val)" [title]="corrResult.symbols[ri].name + ' × ' + corrResult.symbols[ci].name">{{ corrCell(val) }}</td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <!-- Live intraday returns strip -->
+      <div class="corr-live-strip">
+        <span class="cls-label">Variación hoy (en vivo):</span>
+        @for (symObj of corrResult.symbols; track symObj.symbol) {
+          <span class="cls-chip"
+            [class.cls-up]="(liveVarRel(symObj.symbol) ?? 0) > 0"
+            [class.cls-dn]="(liveVarRel(symObj.symbol) ?? 0) < 0"
+            [class.cls-flat]="liveVarRel(symObj.symbol) === null || liveVarRel(symObj.symbol) === 0">
+            <b>{{ symObj.symbol }}</b>
+            @if (liveVarRel(symObj.symbol) !== null) {
+              {{ (liveVarRel(symObj.symbol) ?? 0) >= 0 ? '+' : '' }}{{ liveVarRel(symObj.symbol) | number:'1.2-2' }}%
+            } @else {
+              —
+            }
+          </span>
+        }
+      </div>
+
+      <div class="corr-legend">
+        <span class="cl-item corr-high-pos">≥ 0.7 Alta +</span>
+        <span class="cl-item corr-mid-pos">≥ 0.3 Media +</span>
+        <span class="cl-item corr-neutral">Baja</span>
+        <span class="cl-item corr-mid-neg">≤ -0.3 Media −</span>
+        <span class="cl-item corr-high-neg">≤ -0.7 Alta −</span>
+      </div>
+    }
+  </section>
+  }
+
+  <!-- ═══════════════════════════════════════════════ SHARPE -->
+  @if (activeTab === 'sharpe') {
+  <section class="tool-section">
+    <div class="tool-intro">
+      <div class="tool-intro__icon">⚡</div>
+      <div>
+        <h2>Ratio de Sharpe del Portafolio</h2>
+        <p>Rendimiento ajustado por riesgo de tu portafolio actual. Sharpe &gt; 1 es bueno, &gt; 2 excelente. Calculado con retornos mensuales ponderados vs T-bill USD y vs inflación venezolana.</p>
+      </div>
+    </div>
+    @if (sharpeLoading) { <div class="tool-loading"><mat-spinner diameter="32" strokeWidth="3"></mat-spinner><span>Calculando Sharpe…</span></div> }
+    @if (sharpeError)   { <div class="tool-error"><mat-icon>error_outline</mat-icon><span>{{ sharpeError }}</span></div> }
+    @if (sharpeResult && !sharpeResult.error) {
+      <div class="sharpe-kpis">
+        <div class="sk-card sk-card--main"
+             matTooltip="Ratio de Sharpe = (Retorno Portafolio − Tasa Libre de Riesgo) / Volatilidad. Aquí la tasa libre de riesgo es el T-bill de EE.UU. Mide cuánto retorno extra obtienes por cada unidad de riesgo. Sharpe &gt; 1 es bueno, &gt; 2 es excelente." matTooltipPosition="above">
+          <span class="sk-label">Sharpe vs USD ({{ sharpeResult.risk_free_usd_pct }}% T-bill)</span>
+          <span class="sk-val" [class]="sharpeClass(sharpeResult.sharpe_usd)">{{ sharpeResult.sharpe_usd != null ? (sharpeResult.sharpe_usd | number:'1.2-2') : 'N/D' }}</span>
+          <span class="sk-badge">{{ sharpeLabel(sharpeResult.sharpe_usd) }}</span>
+        </div>
+        <div class="sk-card sk-card--bs"
+             matTooltip="Igual que el Sharpe USD pero usando la inflación venezolana estimada como 'tasa libre de riesgo'. Refleja si tu portafolio en bolívares realmente le gana a la inflación local." matTooltipPosition="above">
+          <span class="sk-label">Sharpe vs Inflación Bs (~{{ sharpeResult.risk_free_bs_pct }}%)</span>
+          <span class="sk-val" [class]="sharpeClass(sharpeResult.sharpe_bs_inflation)">{{ sharpeResult.sharpe_bs_inflation != null ? (sharpeResult.sharpe_bs_inflation | number:'1.2-2') : 'N/D' }}</span>
+          <span class="sk-badge">{{ sharpeLabel(sharpeResult.sharpe_bs_inflation) }}</span>
+        </div>
+        <div class="sk-card"
+             matTooltip="Retorno mensual promedio ponderado de tu portafolio, proyectado a 12 meses. Calcula el retorno de cada acción según su peso en el portafolio y lo combina." matTooltipPosition="above">
+          <span class="sk-label">Retorno Anualizado</span>
+          <span class="sk-val" [class]="sharpeResult.annualized_return_pct >= 0 ? 'txt-up' : 'txt-dn'">{{ sharpeResult.annualized_return_pct >= 0 ? '+' : '' }}{{ sharpeResult.annualized_return_pct | number:'1.1-1' }}%</span>
+          <span class="sk-sub">{{ sharpeResult.months_used }} meses de datos</span>
+        </div>
+        <div class="sk-card"
+             matTooltip="Desviación estándar de los retornos mensuales del portafolio, anualizada (×√12). Mide cuánto oscila el valor del portafolio. Mayor volatilidad = mayor incertidumbre." matTooltipPosition="above">
+          <span class="sk-label">Volatilidad Anualizada</span>
+          <span class="sk-val">{{ sharpeResult.annualized_volatility_pct | number:'1.1-1' }}%</span>
+          <span class="sk-sub">desviación estándar anual</span>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Retornos mensuales ponderados del portafolio</div>
+        <div class="chart-wrap"><canvas #sharpeChart></canvas></div>
+      </div>
+      <div class="liq-table-wrap">
+        <table class="liq-table">
+          <thead>
+            <tr>
+              <th>Acción</th>
+              <th class="right" matTooltip="Porcentaje del valor total del portafolio que representa esta acción." matTooltipPosition="above">Peso %</th>
+              <th class="right" matTooltip="Retorno mensual promedio histórico de esta acción basado en los precios registrados." matTooltipPosition="above">Ret. Mensual</th>
+              <th class="right" matTooltip="Retorno mensual promedio proyectado a 12 meses (×12). No es un pronóstico, es una anualización histórica." matTooltipPosition="above">Ret. Anual</th>
+              <th class="right" matTooltip="Desviación estándar de retornos mensuales anualizada (×√12). Cuánto puede variar el precio de esta acción en un año." matTooltipPosition="above">Volatilidad</th>
+              <th class="right" matTooltip="Retorno ajustado por riesgo de esta acción específica vs T-bill USD. Permite comparar acciones con diferente nivel de riesgo." matTooltipPosition="above">Sharpe</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (s of sharpeResult.per_stock; track s.symbol) {
+              <tr>
+                <td><strong>{{ s.symbol }}</strong></td>
+                <td class="right">{{ s.weight_pct | number:'1.1-1' }}%</td>
+                <td class="right" [class.txt-up]="s.avg_monthly_return_pct >= 0" [class.txt-dn]="s.avg_monthly_return_pct < 0">{{ s.avg_monthly_return_pct >= 0 ? '+' : '' }}{{ s.avg_monthly_return_pct | number:'1.2-2' }}%</td>
+                <td class="right" [class.txt-up]="s.annualized_return_pct >= 0" [class.txt-dn]="s.annualized_return_pct < 0">{{ s.annualized_return_pct >= 0 ? '+' : '' }}{{ s.annualized_return_pct | number:'1.1-1' }}%</td>
+                <td class="right">{{ s.annualized_volatility_pct | number:'1.1-1' }}%</td>
+                <td class="right" [class]="sharpeClass(s.sharpe_usd)"><strong>{{ s.sharpe_usd != null ? (s.sharpe_usd | number:'1.2-2') : '—' }}</strong></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <p class="sharpe-note">{{ sharpeResult.interpretation }}</p>
+    }
+  </section>
+  }
+
+  <!-- ═══════════════════════════════════════════ HEATMAP VELAS (DÍA SEMANA) -->
+  @if (activeTab === 'heatmap') {
+  <section class="tool-section">
+    <div class="tool-intro">
+      <div class="tool-intro__icon">🗓️</div>
+      <div>
+        <h2>Mapa de Calor de Velas</h2>
+        <p>¿Qué día de la semana históricamente tiene el mejor rendimiento y menor volatilidad en la BVC? "Los Viernes suelen ser de toma de ganancias." Análisis basado en el historial completo de la acción.</p>
+      </div>
+    </div>
+
+    <div class="ctrl-row">
+      <div class="ctrl-field">
+        <label>Acción</label>
+        <select [(ngModel)]="hmSymbol" class="ctrl-select">
+          <option value="">Seleccionar símbolo…</option>
+          @for (s of stocks; track s.symbol) {
+            <option [value]="s.symbol">{{ s.symbol }} — {{ s.name }}</option>
+          }
+        </select>
+      </div>
+      <button class="run-btn" (click)="runCandleHeatmap()" [disabled]="!hmSymbol || hmLoading">
+        @if (hmLoading) { <mat-spinner diameter="18" strokeWidth="3"></mat-spinner> }
+        @else { <mat-icon>grid_on</mat-icon> }
+        <span>{{ hmLoading ? 'Analizando…' : 'Analizar' }}</span>
+      </button>
+    </div>
+
+    @if (hmError) { <div class="tool-error"><mat-icon>error_outline</mat-icon><span>{{ hmError }}</span></div> }
+
+    @if (hmResult) {
+      <div class="hm-candle-meta">
+        <span>{{ hmResult.symbol }} · {{ hmResult.name }}</span>
+        <span class="muted">{{ hmResult.total_candles }} velas · {{ hmResult.data_years | number:'1.1-1' }} años de datos</span>
+      </div>
+
+      <div class="hm-day-grid">
+        @for (day of hmResult.days; track day.dow_name) {
+          <div class="hm-day-card" [class.hm-day-best]="day.is_best_return" [class.hm-day-worst]="day.is_worst_return">
+            <div class="hm-day-name">{{ day.dow_name }}</div>
+            @if (day.is_best_return) { <div class="hm-day-badge hm-badge-up">Mejor día</div> }
+            @if (day.is_worst_return) { <div class="hm-day-badge hm-badge-dn">Peor día</div> }
+            <div class="hm-day-stat">
+              <span class="hm-stat-label">Retorno prom.</span>
+              <span class="hm-stat-val" [class.txt-up]="day.avg_return_pct > 0" [class.txt-dn]="day.avg_return_pct < 0">
+                {{ day.avg_return_pct >= 0 ? '+' : '' }}{{ day.avg_return_pct | number:'1.2-2' }}%
+              </span>
+            </div>
+            <div class="hm-day-stat">
+              <span class="hm-stat-label">Win rate</span>
+              <span class="hm-stat-val" [class.txt-up]="day.win_rate >= 55" [class.txt-dn]="day.win_rate < 45">{{ day.win_rate | number:'1.0-0' }}%</span>
+            </div>
+            <div class="hm-day-stat">
+              <span class="hm-stat-label">Volatilidad</span>
+              <span class="hm-stat-val">{{ day.avg_range_pct | number:'1.2-2' }}%</span>
+            </div>
+            <div class="hm-day-stat">
+              <span class="hm-stat-label">Vol. promedio</span>
+              <span class="hm-stat-val">{{ day.avg_volume | number:'1.0-0' }}</span>
+            </div>
+            <div class="hm-day-bar-track">
+              <div class="hm-day-bar-fill"
+                [class.hm-bar-up]="day.avg_return_pct >= 0"
+                [class.hm-bar-dn]="day.avg_return_pct < 0"
+                [style.width.%]="hmDayBarWidth(day.avg_return_pct)">
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="hm-candle-note">
+        <mat-icon>info</mat-icon>
+        <span>Basado en retornos intraday (Close/Open − 1) de cada vela. La volatilidad es el rango promedio (High−Low)/Open × 100%. Los días con menos de 10 velas históricas se muestran con menor confianza.</span>
+      </div>
+    }
+  </section>
+  }
+
+
+
+  <!-- ══════════════════════════════════════════════════ COINTEGRACIÓN -->
+  @if (activeTab === 'cointeg') {
+  <section class="tool-section">
+    <div class="tool-header">
+      <div>
+        <h2>Arbitraje Estadístico — Cointegración</h2>
+        <p class="tool-desc">Prueba de Engle-Granger sobre todos los pares de acciones BVC. Un par cointegrado tiende a volver a su spread histórico — oportunidad de bajo riesgo cuando se separan.</p>
+      </div>
+      <div class="tool-controls">
+        <label>Meses mínimos</label>
+        <select [(ngModel)]="cointMinMonths" class="ctrl-select">
+          <option [value]="12">12 meses</option>
+          <option [value]="18">18 meses</option>
+          <option [value]="24">24 meses</option>
+          <option [value]="36">36 meses</option>
+        </select>
+        <button class="btn-run-sm" (click)="runCointegration()" [disabled]="cointLoading">
+          @if (cointLoading) { <mat-spinner diameter="14" strokeWidth="2"></mat-spinner> } Analizar
+        </button>
+      </div>
+    </div>
+
+    @if (cointLoading) {
+      <div class="tool-loading"><mat-spinner diameter="36" strokeWidth="3"></mat-spinner><span>Ejecutando Engle-Granger en todos los pares…</span></div>
+    }
+    @if (cointError) {
+      <div class="tool-error"><mat-icon>error_outline</mat-icon>{{ cointError }}</div>
+    }
+    @if (cointResult) {
+      <div class="coint-summary">
+        <span class="stat-pill">{{ cointResult.total_pairs_tested }} pares analizados</span>
+        <span class="stat-pill stat-pill--accent">{{ cointResult.cointegrated_found }} cointegrados</span>
+        <span class="stat-note">{{ cointResult.note }}</span>
+      </div>
+
+      @if (cointResult.pairs.length === 0) {
+        <div class="tool-empty"><mat-icon>search_off</mat-icon><p>No se encontraron pares cointegrados con el historial disponible.</p></div>
+      } @else {
+        <div class="coint-table-wrap">
+          <table class="coint-table">
+            <thead>
+              <tr>
+                <th>Par</th>
+                <th>Hedge Ratio</th>
+                <th>ADF t-stat</th>
+                <th>Z-Score spread</th>
+                <th>Half-life</th>
+                <th>Meses</th>
+                <th>Señal</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (p of cointResult.pairs; track p.sym_a + p.sym_b) {
+                <tr>
+                  <td class="pair-cell">
+                    <span class="sym-a">{{ p.sym_a }}</span>
+                    <span class="pair-sep">/</span>
+                    <span class="sym-b">{{ p.sym_b }}</span>
+                    <span class="pair-names">{{ p.name_a }} · {{ p.name_b }}</span>
+                  </td>
+                  <td class="mono">{{ p.hedge_ratio | number:'1.3-3' }}</td>
+                  <td class="mono" [class.txt-up]="p.adf_t_stat < -3.5" [class.txt-warn]="p.adf_t_stat >= -3.5 && p.adf_t_stat <= -3">{{ p.adf_t_stat | number:'1.2-2' }}</td>
+                  <td class="mono" [class.txt-dn]="p.z_score < -1.5" [class.txt-up]="p.z_score > 1.5">{{ p.z_score | number:'1.2-2' }}σ</td>
+                  <td class="mono">{{ p.half_life_months != null ? (p.half_life_months | number:'1.1-1') + 'm' : '—' }}</td>
+                  <td class="mono">{{ p.common_months }}</td>
+                  <td><span class="sig-badge" [class]="cointSignalClass(p.signal)">{{ p.signal }}</span></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <p class="coint-legend">
+          <strong>Señal LONG A / SHORT B</strong>: el spread está por debajo de su media histórica (Z &lt; -1.5) — A está barata relativa a B.<br>
+          <strong>Half-life</strong>: tiempo esperado para que el spread se revierte a la media (menor = más rápido).<br>
+          <strong>ADF t-stat</strong>: más negativo = mayor evidencia de cointegración. Umbral: -3.0 al 5%.
+        </p>
+      }
+    }
+  </section>
+  }
+
+  <!-- ══════════════════════════════════════════════════ WALK-FORWARD -->
+  @if (activeTab === 'walkfwd') {
+  <section class="tool-section">
+
+    <!-- Walk-Forward vs Backtesting clarification -->
+    <div class="info-compare-banner">
+      <div class="icb-col icb-this">
+        <div class="icb-badge icb-badge--active">Este tab</div>
+        <h3>Walk-Forward Validation</h3>
+        <p>Divide el histórico en múltiples ventanas <strong>Train → Val</strong> deslizantes. Evalúa si la estrategia generaliza realmente en datos no vistos. Detecta sobreoptimización ("curve fitting").</p>
+        <ul>
+          <li>No hay un resultado único de retorno</li>
+          <li>El objetivo es medir <em>consistencia</em>, no rentabilidad</li>
+          <li>Una eficiencia cercana a 1 indica robustez</li>
+        </ul>
+      </div>
+      <div class="icb-divider"><span>≠</span></div>
+      <div class="icb-col icb-other">
+        <div class="icb-badge">Backtesting clásico</div>
+        <h3>Backtesting Simple</h3>
+        <p>Aplica la estrategia sobre <em>todo</em> el histórico de una sola vez. Simula la PnL real de cada operación y calcula métricas globales (Sharpe, drawdown, CAGR).</p>
+        <ul>
+          <li>Devuelve retorno acumulado y equity curve</li>
+          <li>Propenso a sobreajuste si se optimizan parámetros</li>
+          <li>Ver tab <strong>Backtesting</strong> para esto</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="tool-header">
+      <div>
+        <h2>Walk-Forward Validation</h2>
+        <p class="tool-desc">Divide el histórico en ventanas de entrenamiento + validación out-of-sample. Detecta sobreajuste: si la estrategia rinde bien en train pero falla en val, está sobreoptimizada.</p>
+      </div>
+    </div>
+
+    <div class="wf-controls">
+      <div class="ctrl-group-row">
+        <div class="ctrl-item">
+          <label>Acción</label>
+          <select [(ngModel)]="wfSymbol" class="ctrl-select">
+            <option value="">-- Seleccionar --</option>
+            @for (s of stocks; track s.symbol) {
+              <option [value]="s.symbol">{{ s.symbol }} — {{ s.name }}</option>
+            }
+          </select>
+        </div>
+        <div class="ctrl-item">
+          <label>Estrategia</label>
+          <select [(ngModel)]="wfStrategy" class="ctrl-select">
+            <option value="ma_cross">MA Crossover (3/6m)</option>
+            <option value="rsi_mean_reversion">RSI Reversión (6m)</option>
+          </select>
+        </div>
+        <div class="ctrl-item">
+          <label>Train (meses)</label>
+          <select [(ngModel)]="wfTrain" class="ctrl-select">
+            <option [value]="24">24</option>
+            <option [value]="36">36</option>
+            <option [value]="48">48</option>
+          </select>
+        </div>
+        <div class="ctrl-item">
+          <label>Val (meses)</label>
+          <select [(ngModel)]="wfVal" class="ctrl-select">
+            <option [value]="6">6</option>
+            <option [value]="12">12</option>
+            <option [value]="18">18</option>
+          </select>
+        </div>
+        <button class="btn-run-sm" (click)="runWalkForward()" [disabled]="wfLoading || !wfSymbol">
+          @if (wfLoading) { <mat-spinner diameter="14" strokeWidth="2"></mat-spinner> } Ejecutar
+        </button>
+      </div>
+    </div>
+
+    @if (wfLoading) {
+      <div class="tool-loading"><mat-spinner diameter="36" strokeWidth="3"></mat-spinner><span>Ejecutando validación walk-forward…</span></div>
+    }
+    @if (wfError) {
+      <div class="tool-error"><mat-icon>error_outline</mat-icon>{{ wfError }}</div>
+    }
+    @if (wfResult) {
+      <!-- Verdict -->
+      <div class="wf-verdict" [class]="wfVerdictClass(wfResult.summary.verdict)">
+        <div class="verdict-badge">{{ wfResult.summary.verdict }}</div>
+        <div class="verdict-body">
+          <p class="verdict-note">{{ wfResult.summary.verdict_note }}</p>
+          <div class="verdict-stats">
+            <span>Promedio in-sample: <strong [class.txt-up]="wfResult.summary.avg_in_sample_pct>=0" [class.txt-dn]="wfResult.summary.avg_in_sample_pct<0">{{ wfResult.summary.avg_in_sample_pct | number:'1.1-1' }}%</strong></span>
+            <span>Promedio out-of-sample: <strong [class.txt-up]="wfResult.summary.avg_out_sample_pct>=0" [class.txt-dn]="wfResult.summary.avg_out_sample_pct<0">{{ wfResult.summary.avg_out_sample_pct | number:'1.1-1' }}%</strong></span>
+            <span>Ratio eficiencia: <strong [class]="wfEffClass(wfResult.summary.avg_efficiency)">{{ wfResult.summary.avg_efficiency | number:'1.2-2' }}</strong></span>
+            <span>Ventanas: <strong>{{ wfResult.summary.total_windows }}</strong></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Windows table -->
+      <div class="wf-table-wrap">
+        <table class="wf-table">
+          <thead>
+            <tr>
+              <th>Ventana</th>
+              <th>Train</th>
+              <th>Validación</th>
+              <th>Retorno IS</th>
+              <th>Retorno OOS</th>
+              <th>B&amp;H (val)</th>
+              <th>Trades OOS</th>
+              <th>Win% OOS</th>
+              <th>Eficiencia</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (w of wfResult.windows; track w.window) {
+              <tr>
+                <td class="mono">#{{ w.window }}</td>
+                <td class="mono small">{{ w.train_start }} → {{ w.train_end }}</td>
+                <td class="mono small">{{ w.val_start }} → {{ w.val_end }}</td>
+                <td class="mono" [class.txt-up]="w.in_sample.total_return_pct>=0" [class.txt-dn]="w.in_sample.total_return_pct<0">{{ w.in_sample.total_return_pct | number:'1.1-1' }}%</td>
+                <td class="mono" [class.txt-up]="w.out_sample.total_return_pct>=0" [class.txt-dn]="w.out_sample.total_return_pct<0">{{ w.out_sample.total_return_pct | number:'1.1-1' }}%</td>
+                <td class="mono" [class.txt-up]="w.bh_val_pct>=0" [class.txt-dn]="w.bh_val_pct<0">{{ w.bh_val_pct | number:'1.1-1' }}%</td>
+                <td class="mono">{{ w.out_sample.trades }}</td>
+                <td class="mono">{{ w.out_sample.win_rate | number:'1.0-0' }}%</td>
+                <td class="mono" [class]="wfEffClass(w.efficiency_ratio)">{{ w.efficiency_ratio | number:'1.2-2' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <p class="coint-legend">
+        <strong>IS</strong> = In-Sample (período de entrenamiento) · <strong>OOS</strong> = Out-of-Sample (período de validación) · <strong>B&amp;H</strong> = Buy &amp; Hold pasivo en el mismo período.<br>
+        <strong>Eficiencia</strong> = OOS/IS. Objetivo: &gt; 0.5. Si &lt; 0.2 → estrategia sobreajustada, no operar.<br>
+        <strong>MA Crossover</strong>: compra cuando SMA-3m &gt; SMA-6m. <strong>RSI</strong>: compra cuando RSI-6m &lt; 35, vende cuando &gt; 65.
+      </p>
+    }
+  </section>
+  }
+
+  <!-- ═══════════════════════════════════════════════ CORRELACIÓN RODANTE -->
+  @if (activeTab === 'rollingcorr') {
+  <section class="tool-section">
+    <div class="tool-intro">
+      <div class="tool-intro__icon">📡</div>
+      <div>
+        <h2 class="tool-title">Correlación Rodante — Detección de Divorcios</h2>
+        <p class="tool-desc">Compara la correlación de <strong>los últimos {{rcWindow}} días</strong> vs el historial largo. Si dos acciones que siempre se movían juntas se "divorcian", hay una oportunidad de <em>Pairs Trading</em>.</p>
+      </div>
+    </div>
+    <div class="tool-controls">
+      <div class="ctrl-group">
+        <label>Ventana corta (días)</label>
+        <input type="number" class="ctrl-input" [(ngModel)]="rcWindow" min="5" max="120">
+      </div>
+      <button class="run-btn" (click)="runRollingCorr()" [disabled]="rcLoading">
+        {{ rcLoading ? 'Calculando…' : 'Calcular' }}
+      </button>
+    </div>
+    @if (rcLoading) {
+      <div class="tool-loading"><mat-spinner diameter="36" strokeWidth="3"></mat-spinner><span>Calculando correlaciones rodantes…</span></div>
+    }
+    @if (rcError) { <p class="tool-error">⚠ {{rcError}}</p> }
+    @if (rcResult) {
+      <p class="tool-note">{{rcResult.note}}</p>
+      <div class="rc-table-wrap">
+        <table class="an-table">
+          <thead>
+            <tr>
+              <th>Par</th>
+              <th>Corr {{rcResult.window_short}}d</th>
+              <th>Corr {{rcResult.window_long}}d</th>
+              <th>Divergencia</th>
+              <th>Señal</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (pair of rcResult.pairs; track pair.sym_a + pair.sym_b) {
+            <tr [class.rc-alert]="(pair.divergence ?? 0) >= 0.35">
+              <td><strong>{{pair.sym_a}}</strong> / <strong>{{pair.sym_b}}</strong>
+                <br><small class="text-muted">{{pair.name_a | slice:0:18}} / {{pair.name_b | slice:0:18}}</small>
+              </td>
+              <td [class.val-up]="(pair.corr_short ?? 0) > 0.3" [class.val-dn]="(pair.corr_short ?? 0) < -0.3">
+                {{ pair.corr_short !== null ? (pair.corr_short | number:'1.2-2') : '—' }}
+              </td>
+              <td [class.val-up]="(pair.corr_long ?? 0) > 0.3" [class.val-dn]="(pair.corr_long ?? 0) < -0.3">
+                {{ pair.corr_long !== null ? (pair.corr_long | number:'1.2-2') : '—' }}
+              </td>
+              <td [class.val-warn]="(pair.divergence ?? 0) >= 0.35" [class.val-up]="(pair.divergence ?? 0) < 0.20">
+                {{ pair.divergence !== null ? (pair.divergence | number:'1.2-2') : '—' }}
+              </td>
+              <td class="signal-cell">{{ pair.signal ?? '—' }}</td>
+            </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <p class="coint-legend">
+        <strong>Divergencia ≥ 0.35</strong> y correlación histórica ≥ 0.50 indica "divorcio" — potencial entrada de Pairs Trading.<br>
+        Compra la acción rezagada, vende la adelantada. Cierra cuando vuelvan a converger.
+      </p>
+    }
+  </section>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════ SMART BETA -->
+  @if (activeTab === 'smartbeta') {
+  <section class="tool-section">
+    <div class="tool-intro">
+      <div class="tool-intro__icon">⚡</div>
+      <div>
+        <h2 class="tool-title">Smart Beta — Optimización de Portafolio</h2>
+        <p class="tool-desc">Calcula pesos de <strong>Mínima Varianza</strong> y <strong>Momentum</strong> para tu portafolio. Muestra qué ajustes reducen el VaR sin sacrificar retorno esperado.</p>
+      </div>
+    </div>
+    <button class="run-btn" (click)="runSmartBeta()" [disabled]="sbLoading" style="margin-bottom:16px">
+      {{ sbLoading ? 'Optimizando…' : 'Optimizar Portafolio' }}
+    </button>
+    @if (sbLoading) {
+      <div class="tool-loading"><mat-spinner diameter="36" strokeWidth="3"></mat-spinner><span>Calculando Smart Beta…</span></div>
+    }
+    @if (sbError) { <p class="tool-error">⚠ {{sbError}}</p> }
+    @if (sbResult) {
+      <!-- VaR comparison -->
+      <div class="sb-var-row">
+        <div class="sb-var-card">
+          <span class="sb-var-label">VaR 95% Actual</span>
+          <span class="sb-var-val val-dn">{{sbResult.portfolio_var_95.current_pct | number:'1.2-2'}}%</span>
+        </div>
+        <div class="sb-var-card">
+          <span class="sb-var-label">VaR Mín. Varianza</span>
+          <span class="sb-var-val val-up">{{sbResult.portfolio_var_95.minvol_pct | number:'1.2-2'}}%</span>
+        </div>
+        <div class="sb-var-card">
+          <span class="sb-var-label">VaR Momentum</span>
+          <span class="sb-var-val">{{sbResult.portfolio_var_95.momentum_pct | number:'1.2-2'}}%</span>
+        </div>
+        <div class="sb-var-card sb-var-card--highlight">
+          <span class="sb-var-label">Reducción VaR (Min-Vol)</span>
+          <span class="sb-var-val val-up">{{sbResult.var_reduction_if_minvol_pct | number:'1.1-1'}}%</span>
+        </div>
+      </div>
+
+      <!-- Per-stock weights table -->
+      <div class="rc-table-wrap">
+        <table class="an-table">
+          <thead>
+            <tr><th>Acción</th><th>Peso Actual</th><th>Min-Varianza</th><th>Momentum</th><th>Vol. Anual</th><th>Ret. 6m</th></tr>
+          </thead>
+          <tbody>
+            @for (s of sbResult.stocks; track s.symbol) {
+            <tr>
+              <td><strong>{{s.symbol}}</strong><br><small class="text-muted">{{s.name | slice:0:22}}</small></td>
+              <td>{{s.current_weight_pct | number:'1.1-1'}}%</td>
+              <td [class.val-up]="s.minvol_weight_pct > s.current_weight_pct" [class.val-dn]="s.minvol_weight_pct < s.current_weight_pct">
+                {{s.minvol_weight_pct | number:'1.1-1'}}%
+              </td>
+              <td [class.val-up]="s.momentum_weight_pct > s.current_weight_pct" [class.val-dn]="s.momentum_weight_pct < s.current_weight_pct">
+                {{s.momentum_weight_pct | number:'1.1-1'}}%
+              </td>
+              <td [class.val-dn]="s.annualized_vol_pct > 60" [class.val-mid]="s.annualized_vol_pct > 30 && s.annualized_vol_pct <= 60" [class.val-up]="s.annualized_vol_pct <= 30">
+                {{s.annualized_vol_pct | number:'1.1-1'}}%
+              </td>
+              <td [class.val-up]="s['6m_return_pct'] > 0" [class.val-dn]="s['6m_return_pct'] < 0">
+                {{s['6m_return_pct'] | number:'1.1-1'}}%
+              </td>
+            </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Rebalancing suggestions -->
+      @if (sbResult.rebalancing_suggestions.length > 0) {
+      <h3 class="sub-title">Sugerencias de Rebalanceo (Min-Varianza)</h3>
+      <div class="sb-suggestions">
+        @for (sg of sbResult.rebalancing_suggestions; track sg.symbol) {
+        <div class="sb-suggestion" [class.sb-suggestion--up]="sg.action === 'AUMENTAR'" [class.sb-suggestion--dn]="sg.action === 'REDUCIR'">
+          <span class="sb-sym">{{sg.symbol}}</span>
+          <span class="sb-action">{{sg.action === 'AUMENTAR' ? '▲ +' : '▼ '}}{{sg.delta_pct | number:'1.1-1'}}%</span>
+          <span class="sb-rationale">{{sg.rationale}}</span>
+        </div>
+        }
+      </div>
+      }
+      <p class="coint-legend">{{sbResult.note}}</p>
+    }
+  </section>
+  }
+
+  <!-- ═══════════════════════════════════════════════════ STRESS TEST -->
+  @if (activeTab === 'stress') {
+  <section class="tool-section">
+    <div class="tool-intro">
+      <div class="tool-intro__icon">🧨</div>
+      <div>
+        <h2 class="tool-title">Simulador de Crisis Histórica (Stress Test)</h2>
+        <p class="tool-desc">Aplica los retornos reales de un período de crisis <em>a tu portafolio de HOY</em>. Responde: "¿Cómo hubiera quedado si esto pasara ahora con lo que tengo?"</p>
+      </div>
+    </div>
+    <div class="tool-controls">
+      <div class="ctrl-group">
+        <label>Escenario</label>
+        <select class="ctrl-input ctrl-select" [(ngModel)]="stScenario">
+          @for (sc of stScenarios; track sc.key) {
+            <option [value]="sc.key">{{sc.label}}</option>
+          }
+        </select>
+      </div>
+      @if (stScenario === 'custom') {
+        <div class="ctrl-group">
+          <label>Desde</label>
+          <input type="date" class="ctrl-input" [(ngModel)]="stCustomStart">
+        </div>
+        <div class="ctrl-group">
+          <label>Hasta</label>
+          <input type="date" class="ctrl-input" [(ngModel)]="stCustomEnd">
+        </div>
+      }
+      <button class="run-btn" (click)="runStressTest()" [disabled]="stLoading">
+        {{ stLoading ? 'Simulando…' : '🧨 Ejecutar Stress Test' }}
+      </button>
+    </div>
+    @if (stLoading) {
+      <div class="tool-loading"><mat-spinner diameter="36" strokeWidth="3"></mat-spinner><span>Simulando crisis…</span></div>
+    }
+    @if (stError) { <p class="tool-error">⚠ {{stError}}</p> }
+    @if (stResult) {
+      <div class="st-header">
+        <div class="st-title">{{stResult.scenario_name}}</div>
+        <p class="tool-desc" style="margin:4px 0 12px">{{stResult.scenario_description}}</p>
+        <div class="st-stats">
+          <div class="st-stat" [class.st-stat--dn]="stResult.total_return_pct < 0" [class.st-stat--up]="stResult.total_return_pct >= 0">
+            <span>Retorno del Período</span>
+            <strong>{{stResult.total_return_pct >= 0 ? '+' : ''}}{{stResult.total_return_pct | number:'1.2-2'}}%</strong>
+          </div>
+          <div class="st-stat st-stat--dn">
+            <span>Máx. Drawdown</span>
+            <strong>{{stResult.max_drawdown_pct | number:'1.2-2'}}%</strong>
+          </div>
+          <div class="st-stat">
+            <span>Días de Trading</span>
+            <strong>{{stResult.trading_days}}</strong>
+          </div>
+          <div class="st-stat">
+            <span>Valor Final (base 100)</span>
+            <strong>{{stResult.final_value | number:'1.2-2'}}</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- Equity curve chart -->
+      <div class="st-chart-wrap">
+        <canvas #stChart></canvas>
+      </div>
+
+      <!-- Per-stock impact -->
+      <h3 class="sub-title">Impacto por Acción</h3>
+      <div class="rc-table-wrap">
+        <table class="an-table">
+          <thead>
+            <tr><th>Acción</th><th>Peso en Portafolio</th><th>Retorno Período</th><th>Contribución al P&L</th></tr>
+          </thead>
+          <tbody>
+            @for (s of stResult.per_stock_impact; track s.symbol) {
+            <tr>
+              <td><strong>{{s.symbol}}</strong><br><small class="text-muted">{{s.name | slice:0:25}}</small></td>
+              <td>{{s.weight_pct | number:'1.1-1'}}%</td>
+              <td [class.val-up]="s.period_return_pct > 0" [class.val-dn]="s.period_return_pct < 0">
+                {{s.period_return_pct >= 0 ? '+' : ''}}{{s.period_return_pct | number:'1.2-2'}}%
+              </td>
+              <td [class.val-up]="s.contribution_pct > 0" [class.val-dn]="s.contribution_pct < 0">
+                {{s.contribution_pct >= 0 ? '+' : ''}}{{s.contribution_pct | number:'1.2-2'}}%
+              </td>
+            </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <p class="coint-legend">{{stResult.note}}</p>
+    }
+  </section>
+  }
+
+  <!-- ═══════════════════════════════════════════════════ CORRELACIÓN WTI -->
+  @if (activeTab === 'wti') {
+  <section class="tool-section">
+    <div class="tool-intro">
+      <div class="tool-intro__icon">🛢</div>
+      <div>
+        <h2 class="tool-title">Correlación con Petróleo WTI</h2>
+        <p class="tool-desc">Para traders de la BVC esto es más importante que el RSI. Venezuela es una economía petrolera: descubre qué acciones siguen el ciclo del crudo y cuáles son independientes.</p>
+      </div>
+    </div>
+    <div class="wf-controls" style="margin-bottom:12px">
+      <div class="ctrl-group-row">
+        <div class="ctrl-item"
+             matTooltip="Ventana de días a analizar. 0 = histórico completo (~2 años). Usa 90 para ver solo la correlación reciente."
+             matTooltipPosition="above">
+          <label>Ventana (días)</label>
+          <input type="number" [(ngModel)]="wtiDays" min="0" max="730" class="ctrl-input" placeholder="0 = histórico" style="width:140px">
+        </div>
+        <button class="btn-run-sm" (click)="runWtiCorrelation()" [disabled]="wtiLoading">
+          @if (wtiLoading) { <mat-spinner diameter="14" strokeWidth="2"></mat-spinner> }
+          🛢 Calcular
+        </button>
+      </div>
+    </div>
+    @if (wtiLoading) {
+      <div class="tool-loading"><mat-spinner diameter="36" strokeWidth="3"></mat-spinner><span>Descargando datos WTI (Yahoo Finance) y calculando correlaciones…</span></div>
+    }
+    @if (wtiError) { <p class="tool-error">⚠ {{wtiError}}</p> }
+    @if (wtiResult) {
+      <p class="tool-note">{{wtiResult.note}}</p>
+      <p class="tool-note" style="color:var(--t2)">Datos WTI: {{wtiResult.wti_data_points}} días · Último: {{wtiResult.wti_latest_date}}</p>
+      <div class="rc-table-wrap">
+        <table class="an-table">
+          <thead>
+            <tr>
+              <th>Acción</th>
+              <th matTooltip="Correlación de Pearson entre los retornos diarios de esta acción y el WTI durante todo el período analizado. Va de -1 (inverso perfecto) a +1 (movimiento idéntico)." matTooltipPosition="above">Corr. Histór.</th>
+              <th matTooltip="Correlación de Pearson calculada solo con los últimos 90 días (o menos si la ventana es más corta). Muestra la relación actual, no la histórica." matTooltipPosition="above">Corr. 90d</th>
+              <th matTooltip="Cantidad de días de trading en los que tanto la acción como el WTI tienen precio registrado. Más días = resultado más confiable." matTooltipPosition="above">Días Comunes</th>
+              <th>Interpretación</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (s of wtiResult.stocks; track s.symbol) {
+            <tr>
+              <td><strong>{{s.symbol}}</strong><br><small class="text-muted">{{s.name | slice:0:25}}</small></td>
+              <td [style.color]="wtiCorrColor(s.corr_full)">
+                <strong>{{s.corr_full | number:'1.2-2'}}</strong>
+              </td>
+              <td [style.color]="wtiCorrColor(s.corr_90d ?? 0)">
+                {{ s.corr_90d !== null ? (s.corr_90d | number:'1.2-2') : '—' }}
+              </td>
+              <td>{{s.common_days}}</td>
+              <td class="signal-cell">{{s.label}}</td>
+            </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <p class="coint-legend">
+        <strong>Corr ≥ 0.50</strong>: acción muy expuesta al ciclo petrolero — sube y baja con el WTI.<br>
+        <strong>Corr ≤ -0.25</strong>: cobertura natural — si el WTI cae, esta acción tiende a subir.<br>
+        <strong>Corr ≈ 0</strong>: relativamente independiente del petróleo (buen diversificador).
+      </p>
+    }
+  </section>
+  }
+
+  <!-- ══════════════════════════════════════════════════ GARCH VOLATILIDAD -->
+  @if (activeTab === 'garch') {
+  <section class="tool-section">
+    <div class="tool-intro">
+      <div class="tool-intro__icon">📉</div>
+      <div>
+        <h2 class="tool-title">GARCH(1,1) — Volatilidad Condicional</h2>
+        <p class="tool-desc">Modelo de volatilidad estocástica ajustado por MLE. Captura los <em>clusters de volatilidad</em> de la BVC: períodos de calma seguidos de explosiones bruscas. Pronóstica la vol a 1d, 5d y 22d.</p>
+      </div>
+    </div>
+    <div class="wf-controls">
+      <div class="ctrl-group-row">
+        <div class="ctrl-item">
+          <label>Acción</label>
+          <select [(ngModel)]="garchSymbol" class="ctrl-select">
+            <option value="">-- Seleccionar --</option>
+            @for (s of stocks; track s.symbol) {
+              <option [value]="s.symbol">{{ s.symbol }} — {{ s.name }}</option>
+            }
+          </select>
+        </div>
+        <button class="btn-run-sm" (click)="runGarch()" [disabled]="garchLoading || !garchSymbol">
+          @if (garchLoading) { <mat-spinner diameter="14" strokeWidth="2"></mat-spinner> } Ejecutar GARCH
+        </button>
+      </div>
+    </div>
+    @if (garchLoading) { <div class="tool-loading"><mat-spinner diameter="36" strokeWidth="3"></mat-spinner><span>Ajustando GARCH(1,1) por MLE…</span></div> }
+    @if (garchError)   { <div class="tool-error"><mat-icon>error_outline</mat-icon>{{ garchError }}</div> }
+    @if (garchResult) {
+      <!-- Regime badge -->
+      <div class="garch-regime-banner" [class]="garchRegimeClass(garchResult.vol_regime)">
+        <span class="regime-label">{{ garchResult.vol_regime.replace('_', ' ') }}</span>
+        <span class="regime-interp">{{ garchResult.interpretation }}</span>
+      </div>
+
+      <!-- KPI grid -->
+      <div class="garch-kpi-grid">
+        <div class="garch-kpi" matTooltip="Volatilidad condicional de HOY estimada por el modelo GARCH, expresada como porcentaje anualizado. Si es mayor que la vol. de largo plazo, el mercado está más agitado de lo normal." matTooltipPosition="above">
+          <span class="garch-kpi-label">Vol. Actual</span>
+          <span class="garch-kpi-val" [class.txt-dn]="garchResult.current_vol_pct > garchResult.long_run_vol_pct * 1.4" [class.txt-warn]="garchResult.current_vol_pct > garchResult.long_run_vol_pct">
+            {{ garchResult.current_vol_pct | number:'1.1-1' }}%
+          </span>
+          <span class="garch-kpi-sub">anual</span>
+        </div>
+        <div class="garch-kpi" matTooltip="La volatilidad promedio a la que tiende el modelo cuando no hay shocks recientes. Calculada como ω / (1 − α − β). Es la 'calma base' histórica de la acción." matTooltipPosition="above">
+          <span class="garch-kpi-label">Vol. Largo Plazo</span>
+          <span class="garch-kpi-val">{{ garchResult.long_run_vol_pct | number:'1.1-1' }}%</span>
+          <span class="garch-kpi-sub">media incondicional</span>
+        </div>
+        <div class="garch-kpi" matTooltip="Pronóstico de volatilidad para mañana basado en el modelo GARCH. Útil para decidir el tamaño de posición del día siguiente." matTooltipPosition="above">
+          <span class="garch-kpi-label">Pronóstico 1d</span>
+          <span class="garch-kpi-val">{{ garchResult.forecast_1d_vol_pct | number:'1.1-1' }}%</span>
+          <span class="garch-kpi-sub">mañana</span>
+        </div>
+        <div class="garch-kpi" matTooltip="Pronóstico de volatilidad promedio para los próximos 5 días hábiles (1 semana de trading). El GARCH revierte gradualmente hacia la vol. de largo plazo." matTooltipPosition="above">
+          <span class="garch-kpi-label">Pronóstico 5d</span>
+          <span class="garch-kpi-val">{{ garchResult.forecast_5d_vol_pct | number:'1.1-1' }}%</span>
+          <span class="garch-kpi-sub">1 semana</span>
+        </div>
+        <div class="garch-kpi" matTooltip="Pronóstico de volatilidad para el próximo mes (~22 días hábiles). A más largo plazo, el pronóstico se acerca a la vol. de largo plazo." matTooltipPosition="above">
+          <span class="garch-kpi-label">Pronóstico 22d</span>
+          <span class="garch-kpi-val">{{ garchResult.forecast_22d_vol_pct | number:'1.1-1' }}%</span>
+          <span class="garch-kpi-sub">1 mes</span>
+        </div>
+        <div class="garch-kpi" matTooltip="α + β mide cuánto duran los shocks de volatilidad. Cerca de 1 = los shocks tardan mucho en disiparse (memoria larga). > 0.99 indica que la volatilidad es casi no estacionaria." matTooltipPosition="above">
+          <span class="garch-kpi-label">Persistencia (α+β)</span>
+          <span class="garch-kpi-val" [class.txt-dn]="garchResult.persistence > 0.95">
+            {{ garchResult.persistence | number:'1.3-3' }}
+          </span>
+          <span class="garch-kpi-sub">cerca de 1 = shocks duraderos</span>
+        </div>
+        <div class="garch-kpi" matTooltip="Días que tarda un shock de volatilidad en reducirse a la mitad. Calculado como log(0.5) / log(α+β). ∞ significa que los shocks no se disipan (proceso no estacionario)." matTooltipPosition="above">
+          <span class="garch-kpi-label">Semivida (días)</span>
+          <span class="garch-kpi-val">{{ garchResult.half_life_days != null ? (garchResult.half_life_days | number:'1.0-0') : '∞' }}</span>
+          <span class="garch-kpi-sub">reversión a la media</span>
+        </div>
+        <div class="garch-kpi" matTooltip="Parámetros estimados del modelo GARCH(1,1): ω (nivel base de varianza), α (reacción a shocks pasados), β (persistencia de varianza pasada). Estimados por Máxima Verosimilitud." matTooltipPosition="above">
+          <span class="garch-kpi-label">Parámetros</span>
+          <span class="garch-kpi-val" style="font-size:.82rem">ω={{ garchResult.omega.toFixed(8) }}</span>
+          <span class="garch-kpi-sub">α={{ garchResult.alpha | number:'1.3-3' }} · β={{ garchResult.beta | number:'1.3-3' }}</span>
+        </div>
+      </div>
+
+      <!-- Vol series chart -->
+      <div class="chart-card" style="margin-top:16px">
+        <div class="chart-title">Volatilidad condicional diaria (últimos 60d) — {{ garchResult.symbol }}</div>
+        <div class="chart-wrap"><canvas #garchChart></canvas></div>
+      </div>
+      <p class="coint-legend">{{ garchResult.note }}</p>
+    }
+  </section>
+  }
+
+  <!-- ══════════════════════════════════════════════ ML PREDICCIÓN -->
+  @if (activeTab === 'mlpredict') {
+  <section class="tool-section">
+    <div class="tool-intro">
+      <div class="tool-intro__icon">🤖</div>
+      <div>
+        <h2 class="tool-title">ML — Predicción de Dirección de Precio</h2>
+        <p class="tool-desc">Regresión Logística con regularización Ridge. 6 features técnicos (momentum, RSI-proxy, posición en rango, z-vol). Validado por Walk-Forward real — sin data leakage. <strong>Disclaimer BVC:</strong> noticias macro pueden anular cualquier señal técnica.</p>
+      </div>
+    </div>
+    <div class="wf-controls">
+      <div class="ctrl-group-row">
+        <div class="ctrl-item">
+          <label>Acción</label>
+          <select [(ngModel)]="mlSymbol" class="ctrl-select">
+            <option value="">-- Seleccionar --</option>
+            @for (s of stocks; track s.symbol) {
+              <option [value]="s.symbol">{{ s.symbol }} — {{ s.name }}</option>
+            }
+          </select>
+        </div>
+        <button class="btn-run-sm" (click)="runMlPredict()" [disabled]="mlLoading || !mlSymbol">
+          @if (mlLoading) { <mat-spinner diameter="14" strokeWidth="2"></mat-spinner> } Predecir
+        </button>
+      </div>
+    </div>
+    @if (mlLoading) { <div class="tool-loading"><mat-spinner diameter="36" strokeWidth="3"></mat-spinner><span>Entrenando modelo y calculando Walk-Forward…</span></div> }
+    @if (mlError)   { <div class="tool-error"><mat-icon>error_outline</mat-icon>{{ mlError }}</div> }
+    @if (mlResult) {
+      <!-- Usability warning -->
+      <div class="ml-warning" [class.ml-warning--ok]="mlResult.is_usable" [class.ml-warning--bad]="!mlResult.is_usable">
+        <mat-icon>{{ mlResult.is_usable ? 'info' : 'warning' }}</mat-icon>
+        <span>{{ mlResult.warning }}</span>
+      </div>
+
+      <!-- Prediction card -->
+      <div class="ml-predict-card" [class.ml-up]="mlResult.prediction.direction === 'ALZA'" [class.ml-dn]="mlResult.prediction.direction === 'BAJA'">
+        <div class="ml-direction" [class]="mlDirClass(mlResult.prediction.direction)">
+          {{ mlResult.prediction.direction === 'ALZA' ? '▲ ALZA' : '▼ BAJA' }}
+        </div>
+        <div class="ml-conf-wrap">
+          <span class="ml-conf-label">Confianza</span>
+          <div class="ml-conf-bar-track">
+            <div class="ml-conf-bar-fill" [style.width.%]="mlResult.prediction.confidence_pct" [class.fill-up]="mlResult.prediction.direction === 'ALZA'" [class.fill-dn]="mlResult.prediction.direction === 'BAJA'"></div>
+          </div>
+          <span class="ml-conf-pct">{{ mlResult.prediction.confidence_pct | number:'1.1-1' }}%</span>
+        </div>
+        <div class="ml-probs">
+          <span>P(Alza) = <strong [class.txt-up]="mlResult.prediction.prob_up >= 0.5">{{ (mlResult.prediction.prob_up * 100) | number:'1.1-1' }}%</strong></span>
+          <span>P(Baja) = <strong [class.txt-dn]="mlResult.prediction.prob_down >= 0.5">{{ (mlResult.prediction.prob_down * 100) | number:'1.1-1' }}%</strong></span>
+        </div>
+        <div class="ml-meta">
+          Último cierre: <b>Bs {{ mlResult.prediction.last_close | number:'1.4-4' }}</b> · {{ mlResult.prediction.last_date }}
+        </div>
+      </div>
+
+      <!-- Accuracy KPIs -->
+      <div class="garch-kpi-grid" style="margin-top:16px">
+        <div class="garch-kpi">
+          <span class="garch-kpi-label">OOS Accuracy (WF)</span>
+          <span class="garch-kpi-val" [class]="mlOosClass(mlResult.avg_oos_accuracy_pct)">{{ mlResult.avg_oos_accuracy_pct | number:'1.1-1' }}%</span>
+          <span class="garch-kpi-sub">umbral: &gt; 52%</span>
+        </div>
+        <div class="garch-kpi">
+          <span class="garch-kpi-label">Accuracy (30d)</span>
+          <span class="garch-kpi-val" [class]="mlOosClass(mlResult.recent_30d_accuracy_pct)">{{ mlResult.recent_30d_accuracy_pct | number:'1.1-1' }}%</span>
+          <span class="garch-kpi-sub">últimas 30 obs.</span>
+        </div>
+        <div class="garch-kpi">
+          <span class="garch-kpi-label">Observaciones</span>
+          <span class="garch-kpi-val">{{ mlResult.data_points }}</span>
+          <span class="garch-kpi-sub">features procesados</span>
+        </div>
+        <div class="garch-kpi">
+          <span class="garch-kpi-label">Modelo</span>
+          <span class="garch-kpi-val" style="font-size:.78rem">{{ mlResult.model }}</span>
+          <span class="garch-kpi-sub">Ridge λ=0.05</span>
+        </div>
+      </div>
+
+      <!-- Walk-Forward windows -->
+      <h3 class="sub-title">Walk-Forward Validation</h3>
+      <div class="wf-table-wrap">
+        <table class="wf-table">
+          <thead>
+            <tr><th>Ventana</th><th>Train</th><th>Val</th><th>Acc. IS</th><th>Acc. OOS</th></tr>
+          </thead>
+          <tbody>
+            @for (w of mlResult.walk_forward; track $index; let i = $index) {
+              <tr>
+                <td class="mono">#{{ i + 1 }}</td>
+                <td class="mono">{{ w.train_size }} obs</td>
+                <td class="mono">{{ w.val_size }} obs</td>
+                <td class="mono" [class]="mlOosClass(w.in_sample_acc_pct)">{{ w.in_sample_acc_pct | number:'1.1-1' }}%</td>
+                <td class="mono" [class]="mlOosClass(w.out_sample_acc_pct)">{{ w.out_sample_acc_pct | number:'1.1-1' }}%</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Feature importance -->
+      <h3 class="sub-title">Importancia de Features</h3>
+      <div class="ml-feat-list">
+        @for (f of mlResult.feature_importance; track f.feature) {
+          <div class="ml-feat-row">
+            <span class="ml-feat-name">{{ f.feature }}</span>
+            <div class="ml-feat-bar-track">
+              <div class="ml-feat-bar-fill" [style.width.%]="f.importance_pct" [class.fill-pos]="f.weight >= 0" [class.fill-neg]="f.weight < 0"></div>
+            </div>
+            <span class="ml-feat-pct">{{ f.importance_pct | number:'1.1-1' }}%</span>
+            <span class="ml-feat-w" [class.txt-up]="f.weight >= 0" [class.txt-dn]="f.weight < 0">{{ f.weight >= 0 ? '+' : '' }}{{ f.weight | number:'1.3-3' }}</span>
+          </div>
+        }
+      </div>
+      <p class="coint-legend">{{ mlResult.note }}</p>
+    }
+  </section>
+  }
+
+  <!-- ══════════════════════════════════════════════ FRONTERA EFICIENTE -->
+  @if (activeTab === 'frontier') {
+  <section class="tool-section">
+    <div class="tool-intro">
+      <div class="tool-intro__icon">📐</div>
+      <div>
+        <h2 class="tool-title">Frontera Eficiente de Markowitz</h2>
+        <p class="tool-desc">Simulación Monte Carlo de {{ efResult?.n_portfolios ?? 6000 }} portafolios aleatorios usando la matriz de covarianza real. Identifica el portafolio de <strong>Mínima Volatilidad</strong> y el de <strong>Máximo Sharpe</strong>.</p>
+      </div>
+    </div>
+    <button class="run-btn" (click)="runEfficientFrontier()" [disabled]="efLoading" style="margin-bottom:16px">
+      {{ efLoading ? 'Calculando…' : '📐 Calcular Frontera' }}
+    </button>
+    @if (efLoading) { <div class="tool-loading"><mat-spinner diameter="36" strokeWidth="3"></mat-spinner><span>Generando {{ 6000 }} portafolios Monte Carlo…</span></div> }
+    @if (efError)   { <div class="tool-error"><mat-icon>error_outline</mat-icon>{{ efError }}</div> }
+    @if (efResult) {
+      <!-- Scatter chart -->
+      <div class="chart-card">
+        <div class="chart-title">Frontera Eficiente — {{ efResult.n_portfolios }} portafolios simulados</div>
+        <div class="chart-wrap ef-chart-wrap"><canvas #efChart></canvas></div>
+      </div>
+
+      <!-- Key portfolio selector tabs -->
+      <div class="ef-port-tabs">
+        <button class="ef-port-tab" [class.ef-port-tab--active]="efSelectedPort === 'current'" (click)="efSelectedPort = 'current'">
+          <span class="ef-dot ef-dot--current"></span> Tu Portafolio
+        </button>
+        <button class="ef-port-tab" [class.ef-port-tab--active]="efSelectedPort === 'min_vol'" (click)="efSelectedPort = 'min_vol'">
+          <span class="ef-dot ef-dot--minvol"></span> Mínima Volatilidad
+        </button>
+        <button class="ef-port-tab" [class.ef-port-tab--active]="efSelectedPort === 'max_sharpe'" (click)="efSelectedPort = 'max_sharpe'">
+          <span class="ef-dot ef-dot--maxsharpe"></span> Máximo Sharpe
+        </button>
+      </div>
+
+      @if (efSelectedPort === 'current') {
+        <div class="ef-key-port">
+          <div class="ef-key-stats">
+            <div class="garch-kpi"><span class="garch-kpi-label">Volatilidad</span><span class="garch-kpi-val txt-dn">{{ efResult.key_portfolios.current.vol_pct | number:'1.1-1' }}%</span></div>
+            <div class="garch-kpi"><span class="garch-kpi-label">Retorno Esp.</span><span class="garch-kpi-val" [class.txt-up]="efResult.key_portfolios.current.ret_pct >= 0" [class.txt-dn]="efResult.key_portfolios.current.ret_pct < 0">{{ efResult.key_portfolios.current.ret_pct | number:'1.1-1' }}%</span></div>
+            <div class="garch-kpi"><span class="garch-kpi-label">Sharpe</span><span class="garch-kpi-val" [class]="sharpeClass(efResult.key_portfolios.current.sharpe)">{{ efResult.key_portfolios.current.sharpe | number:'1.2-2' }}</span></div>
+          </div>
+          <div class="ef-weights">
+            @for (w of efResult.key_portfolios.current.weights; track w.symbol) {
+              <div class="ef-weight-row">
+                <span class="ef-w-sym">{{ w.symbol }}</span>
+                <div class="ef-w-bar-track"><div class="ef-w-bar-fill" [style.width.%]="w.weight_pct"></div></div>
+                <span class="ef-w-pct">{{ w.weight_pct | number:'1.1-1' }}%</span>
+              </div>
+            }
+          </div>
+        </div>
+      }
+      @if (efSelectedPort === 'min_vol') {
+        <div class="ef-key-port">
+          <div class="ef-key-stats">
+            <div class="garch-kpi"><span class="garch-kpi-label">Volatilidad</span><span class="garch-kpi-val txt-up">{{ efResult.key_portfolios.min_vol.vol_pct | number:'1.1-1' }}%</span></div>
+            <div class="garch-kpi"><span class="garch-kpi-label">Retorno Esp.</span><span class="garch-kpi-val" [class.txt-up]="efResult.key_portfolios.min_vol.ret_pct >= 0" [class.txt-dn]="efResult.key_portfolios.min_vol.ret_pct < 0">{{ efResult.key_portfolios.min_vol.ret_pct | number:'1.1-1' }}%</span></div>
+            <div class="garch-kpi"><span class="garch-kpi-label">Sharpe</span><span class="garch-kpi-val" [class]="sharpeClass(efResult.key_portfolios.min_vol.sharpe)">{{ efResult.key_portfolios.min_vol.sharpe | number:'1.2-2' }}</span></div>
+          </div>
+          <div class="ef-weights">
+            @for (w of efResult.key_portfolios.min_vol.weights; track w.symbol) {
+              <div class="ef-weight-row">
+                <span class="ef-w-sym">{{ w.symbol }}</span>
+                <div class="ef-w-bar-track"><div class="ef-w-bar-fill ef-w-bar-fill--green" [style.width.%]="w.weight_pct"></div></div>
+                <span class="ef-w-pct">{{ w.weight_pct | number:'1.1-1' }}%</span>
+              </div>
+            }
+          </div>
+        </div>
+      }
+      @if (efSelectedPort === 'max_sharpe') {
+        <div class="ef-key-port">
+          <div class="ef-key-stats">
+            <div class="garch-kpi"><span class="garch-kpi-label">Volatilidad</span><span class="garch-kpi-val">{{ efResult.key_portfolios.max_sharpe.vol_pct | number:'1.1-1' }}%</span></div>
+            <div class="garch-kpi"><span class="garch-kpi-label">Retorno Esp.</span><span class="garch-kpi-val" [class.txt-up]="efResult.key_portfolios.max_sharpe.ret_pct >= 0" [class.txt-dn]="efResult.key_portfolios.max_sharpe.ret_pct < 0">{{ efResult.key_portfolios.max_sharpe.ret_pct | number:'1.1-1' }}%</span></div>
+            <div class="garch-kpi"><span class="garch-kpi-label">Sharpe</span><span class="garch-kpi-val txt-up">{{ efResult.key_portfolios.max_sharpe.sharpe | number:'1.2-2' }}</span></div>
+          </div>
+          <div class="ef-weights">
+            @for (w of efResult.key_portfolios.max_sharpe.weights; track w.symbol) {
+              <div class="ef-weight-row">
+                <span class="ef-w-sym">{{ w.symbol }}</span>
+                <div class="ef-w-bar-track"><div class="ef-w-bar-fill ef-w-bar-fill--purple" [style.width.%]="w.weight_pct"></div></div>
+                <span class="ef-w-pct">{{ w.weight_pct | number:'1.1-1' }}%</span>
+              </div>
+            }
+          </div>
+        </div>
+      }
+      <p class="coint-legend">{{ efResult.note }}</p>
+    }
+  </section>
+  }
+
+  <!-- ══════════════════════════════════════════════ CVaR / EXPECTED SHORTFALL -->
+  @if (activeTab === 'cvar') {
+  <section class="tool-section">
+    <div class="tool-intro">
+      <div class="tool-intro__icon">🎯</div>
+      <div>
+        <h2 class="tool-title">CVaR — Expected Shortfall del Portafolio</h2>
+        <p class="tool-desc">¿En los peores días, cuánto pierde el portafolio <em>en promedio</em>? El CVaR es más conservador que el VaR: mide la pérdida esperada en la cola de la distribución.</p>
+      </div>
+    </div>
+    <div class="tool-controls">
+      <div class="ctrl-group">
+        <label>Nivel de Confianza</label>
+        <select class="ctrl-select" [(ngModel)]="cvarConfidence">
+          <option [ngValue]="0.90">90% (cola del 10%)</option>
+          <option [ngValue]="0.95">95% (cola del 5%)</option>
+          <option [ngValue]="0.99">99% (cola del 1%)</option>
+        </select>
+      </div>
+      <button class="run-btn" (click)="runCvar()" [disabled]="cvarLoading">
+        {{ cvarLoading ? 'Calculando…' : '🎯 Calcular CVaR' }}
+      </button>
+    </div>
+    @if (cvarLoading) { <div class="tool-loading"><mat-spinner diameter="36" strokeWidth="3"></mat-spinner><span>Calculando Expected Shortfall…</span></div> }
+    @if (cvarError)   { <div class="tool-error"><mat-icon>error_outline</mat-icon>{{ cvarError }}</div> }
+    @if (cvarResult) {
+      <!-- Tail risk banner -->
+      <div class="garch-regime-banner" [class]="cvarTailClass(cvarResult.tail_label)">
+        <span class="regime-label">{{ cvarResult.tail_label.split(' — ')[0] }}</span>
+        <span class="regime-interp">{{ cvarResult.tail_label.includes(' — ') ? cvarResult.tail_label.split(' — ')[1] : '' }}</span>
+      </div>
+
+      <!-- KPIs -->
+      <div class="garch-kpi-grid">
+        <div class="garch-kpi" matTooltip="Value at Risk: el retorno diario que NO se espera perder más del (100-conf)% de los días. Por ejemplo, VaR 95% = -2% significa que solo el 5% de los días el portafolio pierde más del 2%." matTooltipPosition="above">
+          <span class="garch-kpi-label">VaR {{ cvarResult.confidence_pct }}% (diario)</span>
+          <span class="garch-kpi-val txt-warn">{{ cvarResult.var_pct | number:'1.3-3' }}%</span>
+          <span class="garch-kpi-sub">pérdida máx. histórica al {{ cvarResult.confidence_pct }}%</span>
+        </div>
+        <div class="garch-kpi" matTooltip="Conditional VaR (Expected Shortfall): la pérdida PROMEDIO en los peores días que superan el umbral VaR. Más conservador que el VaR porque mide qué tan malo es el escenario, no solo cuándo ocurre." matTooltipPosition="above">
+          <span class="garch-kpi-label">CVaR {{ cvarResult.confidence_pct }}% (ES)</span>
+          <span class="garch-kpi-val txt-dn">{{ cvarResult.cvar_pct | number:'1.3-3' }}%</span>
+          <span class="garch-kpi-sub">pérdida ESPERADA en la cola</span>
+        </div>
+        <div class="garch-kpi" matTooltip="Número de días históricos que cayeron por debajo del umbral VaR. Si hay pocas observaciones (&lt;10), el CVaR puede ser menos fiable por muestra pequeña." matTooltipPosition="above">
+          <span class="garch-kpi-label">Observaciones en Cola</span>
+          <span class="garch-kpi-val">{{ cvarResult.tail_observations }}</span>
+          <span class="garch-kpi-sub">de {{ cvarResult.data_days }} días totales</span>
+        </div>
+        <div class="garch-kpi" matTooltip="Desviación estándar de los retornos diarios del portafolio, escalada a un año (×√252). Mide la dispersión del rendimiento — a mayor volatilidad, mayor incertidumbre." matTooltipPosition="above">
+          <span class="garch-kpi-label">Vol. Anualizada</span>
+          <span class="garch-kpi-val">{{ cvarResult.distribution.ann_vol_pct | number:'1.1-1' }}%</span>
+          <span class="garch-kpi-sub">{{ cvarResult.distribution.std_daily_pct | number:'1.3-3' }}% diaria</span>
+        </div>
+        <div class="garch-kpi" matTooltip="Retorno diario promedio histórico del portafolio, anualizado (×252). No es una predicción futura, es un resumen del comportamiento pasado." matTooltipPosition="above">
+          <span class="garch-kpi-label">Retorno Anual. Esperado</span>
+          <span class="garch-kpi-val" [class.txt-up]="cvarResult.distribution.ann_return_pct >= 0" [class.txt-dn]="cvarResult.distribution.ann_return_pct < 0">
+            {{ cvarResult.distribution.ann_return_pct >= 0 ? '+' : '' }}{{ cvarResult.distribution.ann_return_pct | number:'1.1-1' }}%
+          </span>
+          <span class="garch-kpi-sub">histórico</span>
+        </div>
+        <div class="garch-kpi" matTooltip="Curtosis menos 3 (exceso sobre distribución normal). Positiva ('cola gruesa') significa que los eventos extremos son más frecuentes de lo que predice una distribución normal. La BVC tiende a cola gruesa." matTooltipPosition="above">
+          <span class="garch-kpi-label">Curtosis Exceso</span>
+          <span class="garch-kpi-val" [class.txt-dn]="cvarResult.distribution.is_fat_tailed">{{ cvarResult.distribution.excess_kurtosis | number:'1.2-2' }}</span>
+          <span class="garch-kpi-sub">{{ cvarResult.distribution.is_fat_tailed ? 'Cola GRUESA' : 'Cola normal' }}</span>
+        </div>
+        <div class="garch-kpi" matTooltip="Asimetría de la distribución de retornos. Negativo = hay más días de grandes caídas que de grandes subidas. Positivo = lo opuesto. Cero = distribución simétrica." matTooltipPosition="above">
+          <span class="garch-kpi-label">Sesgo (Skewness)</span>
+          <span class="garch-kpi-val" [class.txt-dn]="cvarResult.distribution.skewness < -0.5">{{ cvarResult.distribution.skewness | number:'1.2-2' }}</span>
+          <span class="garch-kpi-sub">negativo = cola izquierda pesada</span>
+        </div>
+        <div class="garch-kpi" matTooltip="Rango de fechas de los datos históricos diarios usados para calcular VaR y CVaR. Más días = resultados más estadísticamente robustos." matTooltipPosition="above">
+          <span class="garch-kpi-label">Período</span>
+          <span class="garch-kpi-val" style="font-size:.78rem">{{ cvarResult.date_range.from }}</span>
+          <span class="garch-kpi-sub">→ {{ cvarResult.date_range.to }}</span>
+        </div>
+      </div>
+
+      <!-- Return distribution histogram -->
+      <div class="chart-card" style="margin-top:16px">
+        <div class="chart-title">Distribución de retornos diarios — Rojo = cola CVaR</div>
+        <div class="chart-wrap"><canvas #cvarChart></canvas></div>
+      </div>
+
+      <!-- Per-stock contributions -->
+      <h3 class="sub-title">Contribución al CVaR por Acción</h3>
+      <div class="rc-table-wrap">
+        <table class="an-table">
+          <thead>
+            <tr><th>Acción</th><th>Peso</th><th>Contribución al CVaR</th></tr>
+          </thead>
+          <tbody>
+            @for (s of cvarResult.stock_cvar_contributions; track s.symbol) {
+              <tr>
+                <td><strong>{{ s.symbol }}</strong><br><small class="text-muted">{{ s.name | slice:0:25 }}</small></td>
+                <td>{{ s.weight_pct | number:'1.1-1' }}%</td>
+                <td [class.val-dn]="s.cvar_contribution_pct < -0.5" [class.val-warn]="s.cvar_contribution_pct >= -0.5 && s.cvar_contribution_pct < 0">
+                  {{ s.cvar_contribution_pct | number:'1.3-3' }}%
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <p class="coint-legend">{{ cvarResult.note }}</p>
+    }
+  </section>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════ CAPE / PE -->
+  @if (activeTab === 'cape') {
+  <section class="tool-section">
+    <div class="tool-intro">
+      <h3><mat-icon>price_check</mat-icon> CAPE Ratio &amp; PE Relativo</h3>
+      <p>Compara el precio actual contra el promedio histórico (5y / 10y) deflactado por la tasa BCV. Estilo Shiller adaptado al mercado venezolano.</p>
+    </div>
+    <div class="tool-controls">
+      <div class="ctrl">
+        <label>Símbolo</label>
+        <select [(ngModel)]="capeSymbol">
+          <option value="">— Selecciona —</option>
+          @for (s of stocks; track s.symbol) { <option [value]="s.symbol">{{ s.symbol }} — {{ s.name }}</option> }
+        </select>
+      </div>
+      <button class="btn-run" (click)="loadCape()" [disabled]="capeLoading || !capeSymbol">
+        <mat-icon>play_arrow</mat-icon> {{ capeLoading ? 'Calculando…' : 'Calcular' }}
+      </button>
+    </div>
+    @if (capeError) { <div class="err">{{ capeError }}</div> }
+    @if (capeResult) {
+      <div class="cards-grid">
+        <div class="metric-card">
+          <span class="m-label">Precio actual</span>
+          <span class="m-val">{{ capeResult.current_price_bs | number:'1.2-2' }} Bs</span>
+          @if (capeResult.current_price_usd) { <small>= {{ capeResult.current_price_usd | number:'1.4-4' }} USD</small> }
+        </div>
+        <div class="metric-card">
+          <span class="m-label">PE Relativo 5y (Bs)</span>
+          <span class="m-val">{{ capeResult.pe_relative_5y?.ratio ?? '—' }}</span>
+          <small [class]="capeVerdictClass(capeResult.pe_relative_5y?.verdict)">{{ capeResult.pe_relative_5y?.verdict }}</small>
+        </div>
+        <div class="metric-card">
+          <span class="m-label">CAPE 5y (USD)</span>
+          <span class="m-val">{{ capeResult.cape_5y_usd?.ratio ?? '—' }}</span>
+          <small [class]="capeVerdictClass(capeResult.cape_5y_usd?.verdict)">{{ capeResult.cape_5y_usd?.verdict }}</small>
+        </div>
+        <div class="metric-card">
+          <span class="m-label">CAPE 10y (USD)</span>
+          <span class="m-val">{{ capeResult.cape_10y_usd?.ratio ?? '—' }}</span>
+          <small [class]="capeVerdictClass(capeResult.cape_10y_usd?.verdict)">{{ capeResult.cape_10y_usd?.verdict }}</small>
+        </div>
+      </div>
+      <p class="coint-legend">{{ capeResult.note }}</p>
+    }
+  </section>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════ MONTH-END -->
+  @if (activeTab === 'monthend') {
+  <section class="tool-section">
+    <div class="tool-intro">
+      <h3><mat-icon>event</mat-icon> Efecto Fin de Mes</h3>
+      <p>Detecta si la acción tiene un patrón estadísticamente significativo en los últimos días del mes (liquidez de nóminas e impuestos).</p>
+    </div>
+    <div class="tool-controls">
+      <div class="ctrl">
+        <label>Símbolo</label>
+        <select [(ngModel)]="meSymbol">
+          <option value="">— Selecciona —</option>
+          @for (s of stocks; track s.symbol) { <option [value]="s.symbol">{{ s.symbol }} — {{ s.name }}</option> }
+        </select>
+      </div>
+      <button class="btn-run" (click)="loadMonthEnd()" [disabled]="meLoading || !meSymbol">
+        <mat-icon>play_arrow</mat-icon> {{ meLoading ? 'Analizando…' : 'Analizar' }}
+      </button>
+    </div>
+    @if (meError) { <div class="err">{{ meError }}</div> }
+    @if (meResult) {
+      <div class="cards-grid">
+        <div class="metric-card">
+          <span class="m-label">Retorno fin de mes</span>
+          <span class="m-val">{{ meResult.month_end_avg_return_pct | number:'1.2-2' }}%</span>
+        </div>
+        <div class="metric-card">
+          <span class="m-label">Retorno otros días</span>
+          <span class="m-val">{{ meResult.other_days_avg_return_pct | number:'1.2-2' }}%</span>
+        </div>
+        <div class="metric-card">
+          <span class="m-label">Diferencia</span>
+          <span class="m-val">{{ meResult.diff_pct | number:'1.2-2' }}%</span>
+          <small>{{ meResult.signal }}</small>
+        </div>
+        <div class="metric-card">
+          <span class="m-label">Significancia (t-stat)</span>
+          <span class="m-val">{{ meResult.t_stat | number:'1.2-2' }}</span>
+          <small>{{ meResult.significant ? 'Significativo (95%)' : 'No significativo' }}</small>
+        </div>
+      </div>
+      <p class="coint-legend">{{ meResult.note }}</p>
+    }
+  </section>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════ BREAKOUT SCANNER -->
+  @if (activeTab === 'breakout') {
+  <section class="tool-section">
+    <div class="tool-intro">
+      <h3><mat-icon>trending_up</mat-icon> Range Breakout Scanner</h3>
+      <p>Detecta acciones que rompieron el máximo de N días. Marca eventos de calendario (fin de mes) como flag adicional.</p>
+    </div>
+    <div class="tool-controls">
+      <div class="ctrl">
+        <label>Ventana (días)</label>
+        <input type="number" min="5" max="120" [(ngModel)]="brWindow" />
+      </div>
+      <button class="btn-run" (click)="loadBreakout()" [disabled]="brLoading">
+        <mat-icon>radar</mat-icon> {{ brLoading ? 'Escaneando…' : 'Escanear BVC' }}
+      </button>
+    </div>
+    @if (brError) { <div class="err">{{ brError }}</div> }
+    @if (brResult) {
+      <div class="cointeg-table-wrap">
+        <table class="cointeg-table">
+          <thead>
+            <tr>
+              <th>Símbolo</th><th>Tipo</th><th>Cierre</th><th>Máx {{ brWindow }}d</th>
+              <th>Volumen ratio</th><th>Calendar</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (b of brResult.breakouts; track b.symbol) {
+              <tr>
+                <td><strong>{{ b.symbol }}</strong></td>
+                <td><span class="regime-pill" [class]="b.type === 'BREAKOUT_UP' ? 'regime-low' : 'regime-high'">{{ b.type }}</span></td>
+                <td>{{ b.close | number:'1.2-2' }}</td>
+                <td>{{ b.high_window | number:'1.2-2' }}</td>
+                <td>{{ b.volume_ratio | number:'1.2-2' }}x</td>
+                <td>{{ b.calendar_flag || '—' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (!brResult.breakouts?.length) {
+        <p class="coint-legend">No se detectaron rupturas de rango en {{ brWindow }} días.</p>
+      }
+    }
+  </section>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════ WHAT-IF -->
+  @if (activeTab === 'whatif') {
+  <section class="tool-section">
+    <div class="tool-intro">
+      <h3><mat-icon>compare_arrows</mat-icon> Comparador What-If</h3>
+      <p>Construye un portafolio hipotético con pesos personalizados y compáralo contra el IBC en N meses.</p>
+    </div>
+    <div class="tool-controls">
+      <div class="ctrl">
+        <label>Meses históricos</label>
+        <input type="number" min="3" max="60" [(ngModel)]="wifMonths" />
+      </div>
+      <button class="btn-run" (click)="addWifWeight()">
+        <mat-icon>add</mat-icon> Agregar posición
+      </button>
+      <button class="btn-run" (click)="loadWhatIf()" [disabled]="wifLoading || !wifWeights.length">
+        <mat-icon>play_arrow</mat-icon> {{ wifLoading ? 'Simulando…' : 'Simular' }}
+      </button>
+    </div>
+    <div class="wif-rows">
+      @for (w of wifWeights; let i = $index; track i) {
+        <div class="wif-row">
+          <select [(ngModel)]="w.symbol">
+            @for (s of stocks; track s.symbol) { <option [value]="s.symbol">{{ s.symbol }}</option> }
+          </select>
+          <input type="number" min="0" max="100" step="1" [(ngModel)]="w.weight" />
+          <span>%</span>
+          <button class="btn-icon" (click)="removeWifWeight(i)"><mat-icon>delete</mat-icon></button>
+        </div>
+      }
+    </div>
+    @if (wifError) { <div class="err">{{ wifError }}</div> }
+    @if (wifResult) {
+      <div class="cards-grid">
+        <div class="metric-card">
+          <span class="m-label">Retorno hipotético</span>
+          <span class="m-val">{{ wifResult.hypothetical_return_pct | number:'1.2-2' }}%</span>
+        </div>
+        <div class="metric-card">
+          <span class="m-label">Retorno IBC</span>
+          <span class="m-val">{{ wifResult.benchmark_return_pct | number:'1.2-2' }}%</span>
+        </div>
+        <div class="metric-card">
+          <span class="m-label">Alpha</span>
+          <span class="m-val">{{ wifResult.alpha_pct | number:'1.2-2' }}%</span>
+        </div>
+        <div class="metric-card">
+          <span class="m-label">Sharpe hipotético</span>
+          <span class="m-val">{{ wifResult.sharpe | number:'1.2-2' }}</span>
+        </div>
+      </div>
+      <p class="coint-legend">{{ wifResult.note }}</p>
+    }
+  </section>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════ CONFIRMATION BIAS -->
+  @if (activeTab === 'bias') {
+  <section class="tool-section">
+    <div class="tool-intro">
+      <h3><mat-icon>psychology</mat-icon> Sesgo de Confirmación</h3>
+      <p>Si crees que tu tesis es alcista, el sistema generará automáticamente 3 contra-argumentos bajistas con datos técnicos para forzar el pensamiento crítico.</p>
+    </div>
+    <div class="tool-controls">
+      <div class="ctrl">
+        <label>Símbolo</label>
+        <select [(ngModel)]="cbSymbol">
+          <option value="">— Selecciona —</option>
+          @for (s of stocks; track s.symbol) { <option [value]="s.symbol">{{ s.symbol }} — {{ s.name }}</option> }
+        </select>
+      </div>
+      <button class="btn-run" (click)="loadConfirmationBias()" [disabled]="cbLoading || !cbSymbol">
+        <mat-icon>auto_awesome</mat-icon> {{ cbLoading ? 'Generando…' : 'Generar contra-argumentos' }}
+      </button>
+    </div>
+    @if (cbError) { <div class="err">{{ cbError }}</div> }
+    @if (cbResult) {
+      <div class="bias-list">
+        @for (arg of cbResult.counter_arguments; let i = $index; track i) {
+          <div class="bias-item">
+            <span class="bias-num">{{ i + 1 }}</span>
+            <div>
+              <strong>{{ arg.title }}</strong>
+              <p>{{ arg.detail }}</p>
+              <small>Métrica: {{ arg.metric }}</small>
+            </div>
+          </div>
+        }
+      </div>
+      <p class="coint-legend">{{ cbResult.disclaimer }}</p>
+    }
+  </section>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════ CANDLE PATTERNS -->
+  @if (activeTab === 'patterns') {
+  <section class="tool-section">
+    <div class="tool-intro">
+      <h3><mat-icon>candlestick_chart</mat-icon> Patrones de Velas Japonesas</h3>
+      <p>Detección algorítmica pura (no LLM) de patrones clásicos: Doji, Hammer, Engulfing, Morning/Evening Star, Three Soldiers/Crows, Piercing/Dark Cloud.</p>
+    </div>
+    <div class="tool-controls">
+      <div class="ctrl">
+        <label>Símbolo</label>
+        <select [(ngModel)]="patSymbol">
+          <option value="">— Selecciona —</option>
+          @for (s of stocks; track s.symbol) { <option [value]="s.symbol">{{ s.symbol }} — {{ s.name }}</option> }
+        </select>
+      </div>
+      <div class="ctrl">
+        <label>Velas a analizar</label>
+        <input type="number" min="10" max="365" [(ngModel)]="patLookback" />
+      </div>
+      <button class="btn-run" (click)="loadCandlePatterns()" [disabled]="patLoading || !patSymbol">
+        <mat-icon>search</mat-icon> {{ patLoading ? 'Detectando…' : 'Detectar' }}
+      </button>
+    </div>
+    @if (patError) { <div class="err">{{ patError }}</div> }
+    @if (patResult) {
+      <div class="cards-grid">
+        <div class="metric-card">
+          <span class="m-label">Velas analizadas</span>
+          <span class="m-val">{{ patResult.candles_count }}</span>
+        </div>
+        <div class="metric-card">
+          <span class="m-label">Patrones detectados</span>
+          <span class="m-val">{{ patResult.patterns?.length || 0 }}</span>
+        </div>
+        <div class="metric-card">
+          <span class="m-label">Recientes (últ. 5)</span>
+          <span class="m-val">{{ patResult.recent_count }}</span>
+        </div>
+        <div class="metric-card">
+          <span class="m-label">Señal agregada</span>
+          <span class="m-val">{{ patResult.signal }}</span>
+          <small>Score: {{ patResult.score }}</small>
+        </div>
+      </div>
+      <div class="cointeg-table-wrap">
+        <table class="cointeg-table">
+          <thead>
+            <tr><th>Fecha</th><th>Patrón</th><th>Sesgo</th><th>Descripción</th></tr>
+          </thead>
+          <tbody>
+            @for (p of patResult.patterns; track p.index + p.name) {
+              <tr>
+                <td>{{ p.date }}</td>
+                <td><strong>{{ p.name }}</strong></td>
+                <td><span class="regime-pill" [class]="patBiasClass(p.bias)">{{ p.bias }}</span></td>
+                <td>{{ p.desc }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (!patResult.patterns?.length) {
+        <p class="coint-legend">No se detectaron patrones en las {{ patLookback }} velas analizadas.</p>
+      }
+    }
+  </section>
+  }
+
+</div>
+
+<!-- Mobile bottom nav -->
+<nav class="mobile-bottom-nav">
+  <a class="mbn-item" routerLink="/dashboard" routerLinkActive="active">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+    <span>Inicio</span>
+  </a>
+  <a class="mbn-item" routerLink="/portfolio" routerLinkActive="active">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M11 2v20c-5.07-.5-9-4.79-9-10s3.93-9.5 9-10zm2.03 0v8.99H22c-.47-4.74-4.24-8.52-8.97-8.99zm0 11.01V22c4.74-.47 8.5-4.25 8.97-8.99h-8.97z"/></svg>
+    <span>Portafolio</span>
+  </a>
+  <a class="mbn-item" routerLink="/analisis" routerLinkActive="active">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l7.59-7.59L21 8l-9 9z"/></svg>
+    <span>Análisis</span>
+  </a>
+  <a class="mbn-item" routerLink="/transactions" routerLinkActive="active">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M6.99 11L3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z"/></svg>
+    <span>Transacciones</span>
+  </a>
+  <a class="mbn-item" routerLink="/profile" routerLinkActive="active">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+    <span>Perfil</span>
+  </a>
+</nav>

@@ -31,23 +31,72 @@
         <a class="nav-link" routerLink="/graficos" routerLinkActive="active">
           <mat-icon>candlestick_chart</mat-icon><span>Gráficos</span>
         </a>
-        <!-- Redirige a la nueva página de libros -->
+        <!-- Redirige a la nueva página de Market Feed -->
         <a class="nav-link " routerLink="/libros">
-          <mat-icon>menu_book</mat-icon><span>Libros</span>
+          <mat-icon>cell_tower</mat-icon><span>Market Feed</span>
         </a>
-        <a class="nav-link" routerLink="/social" routerLinkActive="active">
-          <mat-icon>groups</mat-icon><span>Red</span>
+        <button class="nav-link nav-link--menu" [matMenuTriggerFor]="toolsMenu">
+          <mat-icon>auto_awesome</mat-icon><span>Herramientas</span><mat-icon class="chevron">expand_more</mat-icon>
+        </button>
+        <mat-menu #toolsMenu="matMenu" class="tools-menu-panel">
+          <button mat-menu-item routerLink="/aprende">
+            <mat-icon>school</mat-icon><span>Academia · Aprende</span>
+          </button>
+          <button mat-menu-item routerLink="/paper-trading">
+            <mat-icon>currency_exchange</mat-icon><span>Simulador Paper Trading</span>
+          </button>
+          <button mat-menu-item routerLink="/montecarlo">
+            <mat-icon>scatter_plot</mat-icon><span>Monte Carlo</span>
+          </button>
+          <button mat-menu-item routerLink="/analisis">
+            <mat-icon>insights</mat-icon><span>Estacionalidad · Backtest</span>
+          </button>
+          <button mat-menu-item routerLink="/indices-bvc">
+            <mat-icon>show_chart</mat-icon><span>Índices BVCC</span>
+          </button>
+        </mat-menu>
+        <a class="nav-link" routerLink="/community" routerLinkActive="active">
+          <mat-icon>groups</mat-icon><span>Comunidad</span>
         </a>
         <a class="nav-link" routerLink="/profile" routerLinkActive="active">
           <mat-icon>person</mat-icon><span>Perfil</span>
         </a>
       </nav>
       <div class="user-actions">
+        <!-- Theme toggle -->
+        <button mat-icon-button class="theme-toggle-btn"
+          (click)="themeSvc.toggle()"
+          [matTooltip]="(themeSvc.isDark$ | async) ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'">
+          <mat-icon>{{ (themeSvc.isDark$ | async) ? 'light_mode' : 'dark_mode' }}</mat-icon>
+        </button>
+
+        <!-- Notification bell -->
+        <button mat-icon-button class="notif-btn"
+          [matTooltip]="(pushSvc.granted$ | async) ? 'Notificaciones activas — click para opciones' : 'Activar notificaciones push'"
+          [matMenuTriggerFor]="notifMenu">
+          <mat-icon [class.notif-active]="pushSvc.granted$ | async">
+            {{ (pushSvc.granted$ | async) ? 'notifications_active' : 'notifications_none' }}
+          </mat-icon>
+        </button>
+        <mat-menu #notifMenu="matMenu" class="notif-menu-panel">
+          @if (!(pushSvc.granted$ | async)) {
+            <button mat-menu-item (click)="togglePush()">
+              <mat-icon>notifications</mat-icon><span>Activar notificaciones push</span>
+            </button>
+          } @else {
+            <button mat-menu-item (click)="testPush()">
+              <mat-icon>send</mat-icon><span>Enviar notificación de prueba</span>
+            </button>
+            <button mat-menu-item (click)="togglePush()">
+              <mat-icon>notifications_off</mat-icon><span>Desactivar push</span>
+            </button>
+          }
+        </mat-menu>
+
         <button mat-icon-button [matMenuTriggerFor]="menu" class="avatar-btn" matTooltip="Cuenta">
           <mat-icon>account_circle</mat-icon>
         </button>
         <mat-menu #menu="matMenu" class="user-menu-panel">
-
           <button mat-menu-item (click)="logout()" class="logout-item">
             <mat-icon class="logout-icon">logout</mat-icon>
             <span class="logout-text">Cerrar Sesión</span>
@@ -85,12 +134,27 @@
       <a routerLink="/graficos" class="nav-item" routerLinkActive="active" (click)="toggleSidebar()">
         <mat-icon>candlestick_chart</mat-icon><span>Gráficos</span>
       </a>
-      <!-- Redirige a la nueva página de libros -->
+      <!-- Redirige a la nueva página de Market Feed -->
       <a routerLink="/libros" class="nav-item nav-item--libros" (click)="toggleSidebar()">
-        <mat-icon>menu_book</mat-icon><span>Libros de Órdenes</span>
+        <mat-icon>cell_tower</mat-icon><span>Market Feed</span>
       </a>
-      <a routerLink="/social" class="nav-item" routerLinkActive="active" (click)="toggleSidebar()">
-        <mat-icon>groups</mat-icon><span>Red de Inversores</span>
+      <a routerLink="/aprende" class="nav-item" routerLinkActive="active" (click)="toggleSidebar()">
+        <mat-icon>school</mat-icon><span>Aprende</span>
+      </a>
+      <a routerLink="/paper-trading" class="nav-item" routerLinkActive="active" (click)="toggleSidebar()">
+        <mat-icon>currency_exchange</mat-icon><span>Simulador Paper Trading</span>
+      </a>
+      <a routerLink="/montecarlo" class="nav-item" routerLinkActive="active" (click)="toggleSidebar()">
+        <mat-icon>scatter_plot</mat-icon><span>Monte Carlo</span>
+      </a>
+      <a routerLink="/analisis" class="nav-item" routerLinkActive="active" (click)="toggleSidebar()">
+        <mat-icon>insights</mat-icon><span>Estacionalidad · Backtest</span>
+      </a>
+      <a routerLink="/indices-bvc" class="nav-item" routerLinkActive="active" (click)="toggleSidebar()">
+        <mat-icon>show_chart</mat-icon><span>Índices BVCC</span>
+      </a>
+      <a routerLink="/community" class="nav-item" routerLinkActive="active" (click)="toggleSidebar()">
+        <mat-icon>groups</mat-icon><span>Comunidad</span>
       </a>
       <a routerLink="/profile" class="nav-item" routerLinkActive="active" (click)="toggleSidebar()">
         <mat-icon>person</mat-icon><span>Mi Perfil</span>
@@ -101,6 +165,22 @@
   <!-- Main content -->
   <main class="content">
     <div class="page-header">
+      <!-- ── Release Notes Banner ─────────────────────────────────── -->
+      <div class="release-banner" *ngIf="showReleaseBanner" @fadeSlideInOut>
+        <div class="rb-glow"></div>
+        <div class="rb-icon">🚀</div>
+        <div class="rb-content">
+          <div class="rb-title">¡Llegó la Versión 2.0! Explosión Quant</div>
+          <p class="rb-text">Hemos añadido Comunidad Social, Análisis Quant Avanzado, Paper Trading y mucho más.</p>
+        </div>
+        <div class="rb-actions">
+          <a mat-button class="rb-btn-main" routerLink="/release-notes">Ver qué hay de nuevo</a>
+          <button mat-icon-button class="rb-close" (click)="dismissReleaseNotes()" matTooltip="Descartar">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+      </div>
+
       <div class="page-header__text">
         <p class="page-header__eyebrow">Bolsa de Caracas</p>
         <h1 class="page-header__title">Tu Portafolio</h1>
@@ -158,10 +238,11 @@
       <div class="kpi-card">
         <div class="kpi-card__icon">📦</div>
         <div class="kpi-card__body">
-          <span class="kpi-card__label">Posiciones Abiertas</span>
+          <span class="kpi-card__label">Acciones en Tenencia</span>
           <span class="kpi-card__value">{{ hideValues ? '•' : portfolioSummary.total_positions }}</span>
         </div>
       </div>
+      
     </div>
     }
 
@@ -174,6 +255,11 @@
       </div>
       <button mat-raised-button color="primary" class="cta-card__btn" routerLink="/transactions/new">
         <mat-icon>add</mat-icon> Nueva Transacción
+      </button>
+      <button mat-stroked-button class="cta-card__btn" (click)="exportDashboardToPdf()"
+              matTooltip="Genera un reporte PDF con tus posiciones, P&L y métricas"
+              style="margin-left: 8px;">
+        <mat-icon>picture_as_pdf</mat-icon> Exportar PDF
       </button>
     </div>
 
@@ -421,7 +507,11 @@
         </div>
         <div class="ci-item">
           <span class="ci-label">ISIN</span>
-          <span class="ci-value ci-mono">{{ companyInfo.isin || '—' }}</span>
+          <span class="ci-value ci-mono">{{ (emisorData?.isin || companyInfo.isin) || '—' }}</span>
+        </div>
+        <div class="ci-item">
+          <span class="ci-label">Sector</span>
+          <span class="ci-value">{{ emisorData?.sector || '—' }}</span>
         </div>
         <div class="ci-item">
           <span class="ci-label">Moneda</span>
@@ -437,7 +527,58 @@
             {{ companyInfo.is_active ? 'Activo' : 'Inactivo' }}
           </span>
         </div>
+        @if (emisorData) {
+        <div class="ci-item">
+          <span class="ci-label">Registros BVC</span>
+          <span class="ci-value">{{ emisorData.total_records | number }} sesiones</span>
+        </div>
+        }
       </div>
+
+      <!-- Histórico BVC -->
+      @if (emisorLoading) {
+      <div class="company-loading" style="margin-top:16px"><mat-spinner diameter="22"></mat-spinner><span>Cargando histórico BVC...</span></div>
+      } @else if (emisorData && emisorData.history.length > 0) {
+      <div class="emisor-hist-wrap">
+        <div class="emisor-hist-header">
+          <mat-icon class="hist-icon">bar_chart</mat-icon>
+          <span class="hist-title">Histórico BVC</span>
+          <span class="hist-count">({{ emisorData.total_records }} sesiones)</span>
+        </div>
+        <div class="emisor-hist-table-wrap">
+          <table class="emisor-hist-table">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Apertura</th>
+                <th>Máx.</th>
+                <th>Mín.</th>
+                <th>Cierre</th>
+                <th>Volumen</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of emisorData.history.slice(0, 50); track row.fecha) {
+              <tr>
+                <td class="mono">{{ row.fecha || '—' }}</td>
+                <td class="mono right">{{ row.apertura | number:'1.2-2' }}</td>
+                <td class="mono right txt-up">{{ row.maximo | number:'1.2-2' }}</td>
+                <td class="mono right txt-dn">{{ row.minimo | number:'1.2-2' }}</td>
+                <td class="mono right bold">{{ row.cierre | number:'1.2-2' }}</td>
+                <td class="mono right muted">{{ row.volumen | number:'1.0-0' }}</td>
+              </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        @if (emisorData.total_records > 50) {
+        <p class="hist-note">Mostrando las 50 sesiones más recientes de {{ emisorData.total_records }} totales.</p>
+        }
+      </div>
+      } @else if (emisorError) {
+      <p class="company-hint" style="color:#f85149;margin-top:12px">{{ emisorError }}</p>
+      }
+
       } @else if (selectedInfoSymbol) {
       <p class="company-hint">No se encontró información para {{ selectedInfoSymbol }}.</p>
       } @else {
@@ -446,7 +587,150 @@
       }
     </div>
 
+    <!-- ── Portfolio Heatmap ─────────────────────────────────────────────── -->
+    @if (heatmapItems.length > 0) {
+      <div class="section-header" style="margin-top:36px">
+        <div class="section-title-wrap">
+          <h2 class="section-title">Mapa de Calor del Portafolio</h2>
+          <p class="section-subtitle">Tamaño = peso · Color = variación del día</p>
+        </div>
+      </div>
+      <app-portfolio-heatmap
+        [items]="heatmapItems"
+        [width]="900"
+        [height]="420"
+        title="Tus posiciones de hoy">
+      </app-portfolio-heatmap>
+    }
+
   </main>
+
+  <!-- ── Admin Panel (solo visible al administrador) ────────────────────── -->
+  @if (isAdmin) {
+    <section class="admin-panel">
+      <div class="admin-panel__header">
+        <mat-icon>admin_panel_settings</mat-icon>
+        <div>
+          <h3>Panel Admin — Correos a Grandes Inversores</h3>
+          <p>Usuarios con al menos una transacción ≥ $500 USD recibirán un correo motivacional.</p>
+        </div>
+        <button class="admin-preview-btn" (click)="adminPreview()" [disabled]="adminLoading">
+          @if (adminLoading) { <mat-spinner diameter="16" strokeWidth="3"></mat-spinner> }
+          @else { <mat-icon>visibility</mat-icon> }
+          <span>Vista previa</span>
+        </button>
+      </div>
+
+      @if (adminPreviewData) {
+        <div class="admin-preview-list">
+          <p class="admin-count">{{ adminPreviewData.count }} usuarios elegibles</p>
+          <div class="admin-user-list">
+            @for (u of adminPreviewData.users; track u.user_id) {
+              <div class="admin-user-row">
+                <span class="admin-user-alias">{{ u.username }}</span>
+                <span class="admin-user-email">{{ u.email }}</span>
+                <span class="admin-user-amount">${{ u.max_amount_usd | number:'1.0-0' }}</span>
+              </div>
+            }
+          </div>
+          <button class="admin-send-btn" (click)="adminSendEmails()" [disabled]="adminSending">
+            @if (adminSending) { <mat-spinner diameter="16" strokeWidth="3"></mat-spinner> }
+            @else { <mat-icon>send</mat-icon> }
+            <span>{{ adminSending ? 'Enviando…' : 'Enviar correos a ' + adminPreviewData.count + ' usuarios' }}</span>
+          </button>
+          @if (adminResult) {
+            <div class="admin-result" [class.admin-result--ok]="adminResult.errors === 0">
+              <mat-icon>{{ adminResult.errors === 0 ? 'check_circle' : 'warning' }}</mat-icon>
+              <span>{{ adminResult.sent }} enviados · {{ adminResult.errors }} errores</span>
+            </div>
+          }
+        </div>
+      }
+    </section>
+
+    <!-- ── Admin: Tasas BCV inconsistentes ──────────────────────────────── -->
+    <section class="admin-panel admin-panel--warning">
+      <div class="admin-panel__header">
+        <mat-icon style="color:#fbbf24">warning_amber</mat-icon>
+        <div>
+          <h3>Panel Admin — Tasas BCV Inconsistentes</h3>
+          <p>Transacciones cuya tasa BCV registrada difiere de la tasa oficial del sistema para esa fecha.</p>
+        </div>
+        <button class="admin-preview-btn admin-preview-btn--warning" (click)="bcvMismatchPreview()" [disabled]="bcvMismatchLoading">
+          @if (bcvMismatchLoading) { <mat-spinner diameter="16" strokeWidth="3"></mat-spinner> }
+          @else { <mat-icon>search</mat-icon> }
+          <span>Analizar</span>
+        </button>
+      </div>
+
+      @if (bcvMismatchData) {
+        <div class="admin-preview-list">
+          <p class="admin-count">
+            {{ bcvMismatchData.count }} usuarios · {{ bcvMismatchData.total_conflicts }} transacciones con discrepancia
+          </p>
+          <div class="admin-user-list">
+            @for (u of bcvMismatchData.users; track u.user_id) {
+              <div class="admin-user-row admin-user-row--expandable">
+                <span class="admin-user-alias">{{ u.username }}</span>
+                <span class="admin-user-email">{{ u.email }}</span>
+                <span class="admin-user-amount admin-badge--warning">{{ u.conflicts.length }} conflictos</span>
+              </div>
+              @for (c of u.conflicts; track c.tx_id) {
+                <div class="admin-conflict-row">
+                  <span class="acr-date">{{ c.transaction_date }}</span>
+                  <span class="acr-symbol">{{ c.symbol }}</span>
+                  <span class="acr-rate acr-rate--tx">Registrada: {{ c.tx_rate | number:'1.2-2' }}</span>
+                  <span class="acr-rate acr-rate--official">Oficial: {{ c.official_rate | number:'1.2-2' }}</span>
+                </div>
+              }
+            }
+          </div>
+          <button class="admin-send-btn admin-send-btn--warning" (click)="bcvMismatchSendEmails()" [disabled]="bcvMismatchSending">
+            @if (bcvMismatchSending) { <mat-spinner diameter="16" strokeWidth="3"></mat-spinner> }
+            @else { <mat-icon>mail</mat-icon> }
+            <span>{{ bcvMismatchSending ? 'Enviando…' : 'Enviar alerta a ' + bcvMismatchData.count + ' usuarios' }}</span>
+          </button>
+          @if (bcvMismatchResult) {
+            <div class="admin-result" [class.admin-result--ok]="bcvMismatchResult.errors === 0">
+              <mat-icon>{{ bcvMismatchResult.errors === 0 ? 'check_circle' : 'warning' }}</mat-icon>
+              <span>{{ bcvMismatchResult.sent }} enviados · {{ bcvMismatchResult.errors }} errores</span>
+            </div>
+          }
+        </div>
+      }
+    </section>
+
+    <!-- ── Admin: Registrar símbolo BVC manualmente ──────────────────────── -->
+    <section class="admin-panel admin-panel--info">
+      <div class="admin-panel__header">
+        <mat-icon style="color:#58a6ff">add_circle</mat-icon>
+        <div>
+          <h3>Registrar / Reactivar Símbolo BVC</h3>
+          <p>Si una acción activa no aparece en la lista, regístrala aquí directamente desde la API de la BVC.</p>
+        </div>
+      </div>
+      <div class="admin-register-row">
+        <input class="admin-symbol-input" [(ngModel)]="registerSymbol" placeholder="Ej: FNV" maxlength="12"
+          (keyup.enter)="registerBvcSymbol()" [disabled]="registerLoading">
+        <button class="admin-preview-btn" (click)="registerBvcSymbol()" [disabled]="registerLoading || !registerSymbol">
+          @if (registerLoading) { <mat-spinner diameter="16" strokeWidth="3"></mat-spinner> }
+          @else { <mat-icon>cloud_download</mat-icon> }
+          <span>{{ registerLoading ? 'Registrando…' : 'Registrar' }}</span>
+        </button>
+      </div>
+      @if (registerResult) {
+        <div class="admin-result" [class.admin-result--ok]="!registerResult.error">
+          <mat-icon>{{ registerResult.error ? 'error' : 'check_circle' }}</mat-icon>
+          <span>{{ registerResult.message }}</span>
+          @if (!registerResult.error) {
+            <span class="admin-result-detail">
+              {{ registerResult.total_sessions }} sesiones · última: {{ registerResult.latest_session }}
+            </span>
+          }
+        </div>
+      }
+    </section>
+  }
 
   <!-- Pie de página con descargo de responsabilidad -->
   <footer class="dashboard-footer">

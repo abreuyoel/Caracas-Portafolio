@@ -659,12 +659,13 @@ async def update_transaction(
             bcv_rate=float(transaction.bcv_rate) if transaction.bcv_rate else None,
             amount_usd=float(transaction.amount_usd) if transaction.amount_usd else None,
             transaction_date=transaction.transaction_date,
-            notes=transaction.notes,
+            brokerage=getattr(transaction, 'brokerage', None),
+            notes=encryption_service.decrypt(transaction.notes) if transaction.notes else "",
             stock_symbol=stock.symbol if stock else "N/A",
             stock_name=stock.name if stock else "N/A",
             created_at=str(transaction.created_at) if transaction.created_at else ""
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:

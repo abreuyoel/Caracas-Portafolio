@@ -1,5 +1,6 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
 from app.websocket.manager import manager
+from app.websocket.bvc_proxy import bvc_cache
 from app.utils.security import decode_token
 from uuid import UUID
 import logging
@@ -41,6 +42,17 @@ async def websocket_endpoint(
     # Aceptar conexión
     await manager.connect(websocket, user_id)
     
+    # Push el último estado del mercado (Cache)
+    for event_name, event_data in bvc_cache.items():
+        try:
+            await websocket.send_json({
+                "type": "bvc_event",
+                "eventName": event_name,
+                "data": event_data
+            })
+        except Exception:
+            pass
+            
     try:
         while True:
             # Esperar mensajes del cliente

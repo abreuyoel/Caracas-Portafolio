@@ -1,0 +1,185 @@
+<!-- Mobile top bar -->
+<div class="mobile-topbar">
+  <a class="mobile-back-btn" routerLink="/dashboard">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+  </a>
+  <span class="mobile-topbar-title">Índices BVC</span>
+</div>
+
+<div class="indices-container">
+
+  <header class="idx-header">
+    <a routerLink="/dashboard" class="back-btn">
+      <mat-icon>arrow_back</mat-icon>
+    </a>
+    <div class="idx-header__title">
+      <span class="eyebrow">Bolsa de Caracas</span>
+      <h1>Índices del Mercado</h1>
+    </div>
+    <button class="refresh-btn" (click)="loadCharts()" [disabled]="loading">
+      <mat-icon [class.spinning]="loading">refresh</mat-icon>
+    </button>
+  </header>
+
+  @if (loading) {
+    <div class="idx-loading">
+      <mat-spinner diameter="40" strokeWidth="3"></mat-spinner>
+      <span>Cargando índices desde BVC…</span>
+    </div>
+  }
+
+  @if (error) {
+    <div class="idx-error">
+      <mat-icon>error_outline</mat-icon>
+      <div>
+        <p>{{ error }}</p>
+        <button class="action-link" (click)="loadCharts()">Reintentar</button>
+      </div>
+    </div>
+  }
+
+  @if (!loading && data) {
+
+    <!-- VIX Proxy Banner -->
+    @if (vixProxy !== null) {
+      <div class="vix-banner"
+        [class.vix-1]="vixLevel(vixProxy) === 1"
+        [class.vix-2]="vixLevel(vixProxy) === 2"
+        [class.vix-3]="vixLevel(vixProxy) === 3"
+        [class.vix-4]="vixLevel(vixProxy) === 4">
+        <div class="vix-icon-wrap">
+          <mat-icon>{{ vixIcon(vixProxy) }}</mat-icon>
+        </div>
+        <div class="vix-body">
+          <div class="vix-top-row">
+            <span class="vix-label">VIX Proxy BVC · Volatilidad Realizada IBC (30d)</span>
+            <span class="vix-percentile">Percentil {{ vixPercentile(vixProxy) }}</span>
+          </div>
+          <div class="vix-row">
+            <span class="vix-value" [class]="vixClass(vixProxy)">{{ vixProxy | number:'1.2-2' }}%</span>
+            <span class="vix-status">{{ vixLabel(vixProxy) }}</span>
+          </div>
+          <p class="vix-subtitle">{{ vixSubtitle(vixProxy) }}</p>
+          <div class="vix-scale">
+            <span class="scale-zone z1" [class.active]="vixLevel(vixProxy) === 1">&lt;18% Letargo</span>
+            <span class="scale-zone z2" [class.active]="vixLevel(vixProxy) === 2">18–30% Óptimo</span>
+            <span class="scale-zone z3" [class.active]="vixLevel(vixProxy) === 3">30–50% Tensión</span>
+            <span class="scale-zone z4" [class.active]="vixLevel(vixProxy) === 4">&gt;50% Pánico</span>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Summary KPI row -->
+    <div class="idx-kpi-row">
+      @for (m of meta; track m.key) {
+        <div class="idx-kpi-card" [style.--c]="m.color">
+          <div class="kpi-top">
+            <span class="kpi-sym">{{ m.label }}</span>
+            @if (liveFor(m.key) !== null) {
+              <span class="live-chip">LIVE</span>
+            }
+          </div>
+          <span class="kpi-price">{{ displayValue(m.key) !== null ? (displayValue(m.key)! | number:'1.0-2') : '—' }}</span>
+          @if (changePct(m.key) !== null) {
+            <span class="kpi-change" [class]="changeClass(changePct(m.key))">
+              {{ changePct(m.key)! >= 0 ? '▲' : '▼' }} {{ changePct(m.key)! | number:'1.2-2' }}%
+            </span>
+          }
+          <span class="kpi-sub">{{ m.name }}</span>
+        </div>
+      }
+    </div>
+
+    <!-- View mode toggle -->
+    <div class="idx-toggle-row">
+      <div class="idx-toggle">
+        <button class="toggle-btn" [class.active]="viewMode === 'intraday'" (click)="switchMode('intraday')">
+          <mat-icon>schedule</mat-icon> Intradiario
+        </button>
+        <button class="toggle-btn" [class.active]="viewMode === 'annual'" (click)="switchMode('annual')">
+          <mat-icon>calendar_month</mat-icon> Anual (252d)
+        </button>
+      </div>
+      <span class="idx-period-info">
+        {{ viewMode === 'intraday' ? 'Sesión actual · ticks en tiempo real' : 'Cierres diarios · último año bursátil' }}
+      </span>
+    </div>
+
+    <!-- Area Charts -->
+    @for (m of meta; track m.key) {
+      <div class="idx-chart-card" [style.--accent]="m.color">
+        <div class="idx-chart-header">
+          <div class="chart-title-group">
+            <div class="chart-color-dot" [style.background]="m.color"></div>
+            <div>
+              <h2>{{ m.label }}</h2>
+              <p class="idx-chart-name">{{ m.name }}</p>
+            </div>
+          </div>
+          <div class="idx-chart-kpis">
+            <span class="idx-kpi-val">
+              {{ displayValue(m.key) !== null ? (displayValue(m.key)! | number:'1.0-2') : '—' }}
+              @if (liveFor(m.key) !== null) {
+                <span class="live-badge">LIVE</span>
+              }
+            </span>
+            @if (changePct(m.key) !== null) {
+              <span class="idx-kpi-chg" [class]="changeClass(changePct(m.key))">
+                <mat-icon>{{ changePct(m.key)! >= 0 ? 'trending_up' : 'trending_down' }}</mat-icon>
+                {{ changePct(m.key)! >= 0 ? '+' : '' }}{{ changePct(m.key)! | number:'1.2-2' }}%
+                <span class="chg-period">{{ viewMode === 'intraday' ? 'sesión' : '252d' }}</span>
+              </span>
+            }
+          </div>
+        </div>
+
+        @if (seriesLength(m.key) === 0) {
+          <div class="idx-no-data">
+            <mat-icon>bar_chart</mat-icon>
+            <p>Sin datos disponibles para {{ m.label }}</p>
+          </div>
+        } @else {
+          @if (m.key === 'IBC') {
+            <div class="idx-chart-wrap" #ibcChart></div>
+          } @else if (m.key === 'FINANCIERO') {
+            <div class="idx-chart-wrap" #financieroChart></div>
+          } @else {
+            <div class="idx-chart-wrap" #industrialChart></div>
+          }
+          <div class="idx-chart-footer">
+            <span>{{ seriesLength(m.key) }} {{ viewMode === 'intraday' ? 'ticks' : 'sesiones' }}</span>
+            <span class="footer-sep">·</span>
+            <span>{{ formatTime(firstTime(m.key)) }} → {{ formatTime(lastTime(m.key)) }}</span>
+          </div>
+        }
+      </div>
+    }
+
+  }
+
+</div>
+
+<!-- Mobile bottom nav -->
+<nav class="mobile-bottom-nav">
+  <a class="mbn-item" routerLink="/dashboard" routerLinkActive="active">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+    <span>Inicio</span>
+  </a>
+  <a class="mbn-item" routerLink="/portfolio" routerLinkActive="active">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M11 2v20c-5.07-.5-9-4.79-9-10s3.93-9.5 9-10zm2.03 0v8.99H22c-.47-4.74-4.24-8.52-8.97-8.99zm0 11.01V22c4.74-.47 8.5-4.25 8.97-8.99h-8.97z"/></svg>
+    <span>Portafolio</span>
+  </a>
+  <a class="mbn-item" routerLink="/indices-bvc" routerLinkActive="active">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M3.5 18.5l6-6 4 4L22 6.92 20.59 5.5l-7.09 8-4-4L2 17z"/></svg>
+    <span>Índices</span>
+  </a>
+  <a class="mbn-item" routerLink="/graficos" routerLinkActive="active">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M3.5 18.5l6-6 4 4L22 6.92 20.59 5.5l-7.09 8-4-4L2 17z"/></svg>
+    <span>Gráficos</span>
+  </a>
+  <a class="mbn-item" routerLink="/analisis" routerLinkActive="active">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+    <span>Análisis</span>
+  </a>
+</nav>

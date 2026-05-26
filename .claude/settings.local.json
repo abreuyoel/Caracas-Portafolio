@@ -8,7 +8,11 @@
       "Bash(python -c \"import os; os.environ['PYTHONIOENCODING']='utf-8'\")",
       "Bash(python -X utf8 import_bcv_rates.py)",
       "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('Name:', d.get\\('name'\\)\\); print\\('Angular:', d.get\\('dependencies',{}\\).get\\('@angular/core','?'\\)\\)\")",
-      "Bash(gcloud logging:*)"
+      "Bash(gcloud logging:*)",
+      "Bash(git -C \"c:\\\\Users\\\\Yoel Abreu\\\\OneDrive\\\\Desktop\\\\CV-Yoel Abreu\\\\Gestion Portafolio\" remote -v)",
+      "Bash(curl -s -I \"https://api.caracasportafolio.com/\")",
+      "Bash(curl -s \"https://api.caracasportafolio.com/\")",
+      "Bash(gcloud run:*)"
     ]
   }
 }

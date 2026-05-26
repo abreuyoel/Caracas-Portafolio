@@ -1,7 +1,28 @@
 import { Injectable } from '@angular/core';
-import { Observable, Subject, shareReplay } from 'rxjs';
+import { Observable, Subject, BehaviorSubject, shareReplay } from 'rxjs';
 import { AuthService } from './auth.service';
 import { environment } from '../../../environments/environment';
+
+export interface LiveMarketTick {
+  symbol: string;
+  time: string;
+  bid_vol: number;
+  bid_price: number;
+  ask_price: number;
+  ask_vol: number;
+  close: number;
+  open: number;
+  change_pct: number;
+  change_abs: number;
+  volume: number;
+  amount: number;
+  trades: number;
+  high: number;
+  low: number;
+  is_live: boolean;
+}
+
+export type MarketBoard = Record<string, LiveMarketTick>;
 
 @Injectable({
   providedIn: 'root'
@@ -10,6 +31,11 @@ export class WebSocketService {
   private socket: WebSocket | null = null;
   private messagesSubject: Subject<any> = new Subject<any>();
   public messages$: Observable<any> = this.messagesSubject.asObservable().pipe(shareReplay(1));
+  
+  // ✅ Nuevo: Estado global del mercado en tiempo real
+  private marketBoardSubject = new BehaviorSubject<MarketBoard>({});
+  public marketBoard$ = this.marketBoardSubject.asObservable();
+
   private reconnectInterval: number = 5000;
   private reconnectAttempts: number = 0;
   private maxReconnectAttempts: number = 10;
@@ -48,8 +74,13 @@ export class WebSocketService {
       this.socket.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          console.log('📨 WebSocket message:', data);
-          this.messagesSubject.next(data);
+          // ✅ Distribuir eventos según su tipo de payload
+          if (data.type === 'market_board_update') {
+            this.marketBoardSubject.next(data.data as MarketBoard);
+          } else {
+            console.log('📨 WebSocket message:', data);
+            this.messagesSubject.next(data);
+          }
         } catch (error) {
           console.error('❌ Error parsing WebSocket message:', error);
         }

@@ -165,3 +165,190 @@ img, video, canvas, svg {
 .stock-search-input::placeholder {
   color: rgba(255, 255, 255, 0.3) !important;
 }
+
+// ═══════════════════════════════════════════════════════════════════════
+// LIGHT THEME OVERRIDES
+// Applied when body.light-theme is present (ThemeService toggle)
+// ═══════════════════════════════════════════════════════════════════════
+body.light-theme {
+  background: #f0f4f8;
+  color: #1a1f2e;
+
+  // Scrollbar
+  ::-webkit-scrollbar-track { background: rgba(0,0,0,0.06); }
+  ::-webkit-scrollbar-thumb { background: rgba(76,98,255,0.35); }
+
+  // Dashboard shell
+  ::ng-deep .dashboard-container {
+    background: #f0f4f8 !important;
+    .bg-blob { opacity: 0.04 !important; }
+  }
+
+  ::ng-deep .top-toolbar {
+    background: rgba(255,255,255,0.9) !important;
+    border-bottom: 1px solid rgba(0,0,0,0.08) !important;
+    backdrop-filter: blur(12px);
+  }
+
+  ::ng-deep .nav-link {
+    color: #374151 !important;
+    &.active, &:hover { color: #4c62ff !important; background: rgba(76,98,255,0.08) !important; }
+  }
+
+  ::ng-deep .sidebar {
+    background: rgba(255,255,255,0.95) !important;
+    border-right: 1px solid rgba(0,0,0,0.08) !important;
+  }
+
+  // Cards
+  ::ng-deep .card, ::ng-deep .kpi-card, ::ng-deep .dashboard-card,
+  ::ng-deep .market-card, ::ng-deep .position-card {
+    background: #ffffff !important;
+    border-color: rgba(0,0,0,0.08) !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
+    color: #1a1f2e !important;
+  }
+
+  // Market feed / libros
+  ::ng-deep .market-feed-container { background: #f0f4f8 !important; color: #1a1f2e !important; }
+  ::ng-deep .mf-table-wrapper { background: #ffffff !important; border-color: rgba(0,0,0,0.1) !important; }
+  ::ng-deep .mf-table {
+    th { background: #f6f8fa !important; color: #57606a !important; border-color: rgba(0,0,0,0.08) !important; }
+    td { color: #1a1f2e !important; border-color: rgba(0,0,0,0.06) !important; }
+    .stock-row:hover { background: #f0f4ff !important; }
+    .c-code { color: #4c62ff !important; }
+    .bold { color: #1a1f2e !important; }
+    .muted { color: #57606a !important; }
+  }
+
+  ::ng-deep .kpi-card {
+    background: #ffffff !important;
+    border-color: rgba(0,0,0,0.08) !important;
+    .kpi-label { color: #57606a !important; }
+    .kpi-val { color: #1a1f2e !important; }
+    &.pnl-card { background: linear-gradient(145deg, #f8faff 0%, #eef2ff 100%) !important; }
+  }
+
+  ::ng-deep .mf-topbar .back-btn {
+    background: #ffffff !important;
+    border-color: rgba(0,0,0,0.15) !important;
+    color: #374151 !important;
+  }
+
+  ::ng-deep .mf-status-indicator {
+    background: rgba(46,160,67,0.08) !important;
+    border-color: rgba(46,160,67,0.3) !important;
+  }
+
+  // Material Tabs
+  ::ng-deep .mf-tabs .mat-mdc-tab-header { background: #ffffff !important; border-bottom-color: rgba(0,0,0,0.1) !important; }
+  ::ng-deep .mf-tabs .mat-mdc-tab { color: #57606a !important; }
+  ::ng-deep .mf-tabs .mat-mdc-tab.mdc-tab--active { color: #1a1f2e !important; }
+
+  // Dialog
+  ::ng-deep .mat-mdc-dialog-container { background: #ffffff !important; color: #1a1f2e !important; }
+  ::ng-deep .mat-mdc-dialog-title { color: #1a1f2e !important; }
+
+  // User menu / tools menu dropdowns
+  .mdc-menu-surface { background: #ffffff !important; }
+  .mat-mdc-option { color: #1a1f2e !important; }
+  .mat-mdc-option:hover, .mat-mdc-option.mdc-list-item--selected {
+    background: rgba(76,98,255,0.08) !important;
+    color: #1a1f2e !important;
+  }
+  .mat-mdc-menu-panel.tools-menu-panel { background: #f8faff !important; border-color: rgba(76,98,255,0.15) !important; }
+  .mat-mdc-menu-panel.tools-menu-panel .mat-mdc-menu-item { color: #374151 !important; }
+  .mat-mdc-menu-panel.tools-menu-panel .mat-mdc-menu-item:hover { background: rgba(76,98,255,0.07) !important; color: #1a1f2e !important; }
+
+  // Input overrides
+  ::ng-deep .mat-mdc-form-field .mat-mdc-floating-label { color: #57606a !important; }
+  ::ng-deep .mat-mdc-input-element { color: #1a1f2e !important; }
+
+  // Text helpers
+  ::ng-deep .text-muted, ::ng-deep .muted { color: #57606a !important; }
+}
+
+/* ══ Tools dropdown menu ════════════════════════════════════════════════════
+   NOTE: Angular Material puts panelClass directly ON .mat-mdc-menu-panel,
+   so selector must be .mat-mdc-menu-panel.tools-menu-panel (NO space).
+   ═══════════════════════════════════════════════════════════════════════ */
+.mat-mdc-menu-panel.tools-menu-panel {
+  background: #07111f !important;
+  border-radius: 18px !important;
+  min-width: 272px !important;
+  overflow: visible !important;
+  box-shadow:
+    0 28px 72px rgba(0,0,0,0.85),
+    0 0 0 1px rgba(76,98,255,0.28),
+    inset 0 1px 0 rgba(255,255,255,0.07) !important;
+}
+
+/* Top gradient accent bar */
+.mat-mdc-menu-panel.tools-menu-panel .mat-mdc-menu-content::before {
+  content: '';
+  display: block;
+  height: 3px;
+  margin: -8px -8px 8px;
+  background: linear-gradient(90deg, #4c62ff 0%, #a855f7 50%, #06b6d4 100%);
+  border-radius: 18px 18px 0 0;
+}
+
+.mat-mdc-menu-panel.tools-menu-panel .mat-mdc-menu-content {
+  padding: 8px 8px 10px !important;
+  background: transparent !important;
+}
+
+/* Section label */
+.mat-mdc-menu-panel.tools-menu-panel .mat-mdc-menu-content::after {
+  content: 'HERRAMIENTAS';
+  display: block;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: rgba(255,255,255,0.2);
+  padding: 2px 6px 8px;
+  margin-top: -4px;
+}
+
+.mat-mdc-menu-panel.tools-menu-panel .mat-mdc-menu-item {
+  color: rgba(255,255,255,0.75) !important;
+  font-size: 0.875rem !important;
+  font-weight: 600 !important;
+  border-radius: 10px !important;
+  margin-bottom: 2px !important;
+  transition: background 0.14s, color 0.14s, transform 0.14s, padding-left 0.14s !important;
+  height: 48px !important;
+  letter-spacing: 0.01em !important;
+  border-left: 2px solid transparent !important;
+}
+.mat-mdc-menu-panel.tools-menu-panel .mat-mdc-menu-item:hover,
+.mat-mdc-menu-panel.tools-menu-panel .mat-mdc-menu-item.cdk-focused,
+.mat-mdc-menu-panel.tools-menu-panel .mat-mdc-menu-item:focus {
+  background: rgba(255,255,255,0.055) !important;
+  color: #ffffff !important;
+  transform: translateX(3px) !important;
+}
+.mat-mdc-menu-panel.tools-menu-panel .mat-mdc-menu-item .mat-icon {
+  font-size: 20px !important;
+  width: 20px !important;
+  height: 20px !important;
+  margin-right: 14px !important;
+  flex-shrink: 0;
+  transition: transform 0.14s !important;
+}
+.mat-mdc-menu-panel.tools-menu-panel .mat-mdc-menu-item:hover .mat-icon {
+  transform: scale(1.15) !important;
+}
+
+/* Per-item accent icon colors + hover border */
+.mat-mdc-menu-panel.tools-menu-panel .mat-mdc-menu-item:nth-child(3) .mat-icon { color: #fbbf24 !important; }
+.mat-mdc-menu-panel.tools-menu-panel .mat-mdc-menu-item:nth-child(4) .mat-icon { color: #34d399 !important; }
+.mat-mdc-menu-panel.tools-menu-panel .mat-mdc-menu-item:nth-child(5) .mat-icon { color: #a78bfa !important; }
+.mat-mdc-menu-panel.tools-menu-panel .mat-mdc-menu-item:nth-child(6) .mat-icon { color: #60a5fa !important; }
+.mat-mdc-menu-panel.tools-menu-panel .mat-mdc-menu-item:nth-child(7) .mat-icon { color: #fb923c !important; }
+
+.mat-mdc-menu-panel.tools-menu-panel .mat-mdc-menu-item:nth-child(3):hover { border-left-color: #fbbf24 !important; }
+.mat-mdc-menu-panel.tools-menu-panel .mat-mdc-menu-item:nth-child(4):hover { border-left-color: #34d399 !important; }
+.mat-mdc-menu-panel.tools-menu-panel .mat-mdc-menu-item:nth-child(5):hover { border-left-color: #a78bfa !important; }
+.mat-mdc-menu-panel.tools-menu-panel .mat-mdc-menu-item:nth-child(6):hover { border-left-color: #60a5fa !important; }
+.mat-mdc-menu-panel.tools-menu-panel .mat-mdc-menu-item:nth-child(7):hover { border-left-color: #fb923c !important; }

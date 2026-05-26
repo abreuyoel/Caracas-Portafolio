@@ -58,6 +58,7 @@ async def _scrape_bcv_home() -> dict | None:
     dolar_div = soup.find("div", id="dolar")
     if not dolar_div:
         logger.error("BCV daily: div#dolar not found in page")
+        logger.debug(f"BCV daily: page snippet = {resp.text[:500]}")
         return None
 
     strong = dolar_div.find("strong")
@@ -65,10 +66,11 @@ async def _scrape_bcv_home() -> dict | None:
         logger.error("BCV daily: <strong> not found inside div#dolar")
         return None
 
+    raw_text = strong.get_text(strip=True).replace(" ", "").replace("\xa0", "")
     try:
-        rate = float(strong.get_text(strip=True).replace(",", ".").replace(" ", ""))
+        rate = float(raw_text.replace(",", "."))
     except ValueError as exc:
-        logger.error(f"BCV daily: cannot parse rate '{strong.get_text()}' — {exc}")
+        logger.error(f"BCV daily: cannot parse rate '{raw_text}' — {exc}")
         return None
 
     # Date: prefer content attr of .date-display-single
@@ -79,6 +81,7 @@ async def _scrape_bcv_home() -> dict | None:
     else:
         iso_date = date.today().isoformat()
 
+    logger.info(f"BCV daily: scraped rate={rate} date={iso_date}")
     return {"date": iso_date, "rate": round(rate, 8)}
 
 

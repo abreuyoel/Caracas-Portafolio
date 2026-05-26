@@ -63,6 +63,15 @@ export interface ChartContextInput {
     dmi?: number | null;
     stoch_k?: number | null;
     mfi?: number | null;
+    // ── Microstructure & Valuation ──────────────────────────────────────────
+    cvd_cumulative?: number | null;
+    cvd_last_delta?: number | null;
+    cvd_trend?: string | null;
+    vp_hvn?: number | null;
+    vp_lvn?: number | null;
+    price_percentile252?: number | null;
+    value_zone_z?: number | null;
+    value_zone_label?: string | null;
     lastCandles?: any[];
     rsiHistory?: Array<{ time: string; value: number }>;
     ema20History?: Array<{ time: string; value: number }>;

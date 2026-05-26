@@ -13,12 +13,9 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
     
-    # Email
-    smtp_host: str = "smtp.gmail.com"
-    smtp_port: int = 587
-    smtp_user: str = "abreuyoel22@gmail.com"
-    smtp_password: str = "eillgiimvvftpkse"
-    email_from: str = "abreuyoel22@gmail.com"
+    # Email (Resend)
+    resend_api_key: str = ""
+    email_from: str = "privacy@caracasportafolio.com"
     
     # VAPID
     vapid_public_key: str = ""
@@ -34,6 +31,9 @@ class Settings(BaseSettings):
     # Gemini AI
     gemini_api_key: str = ""
     gemini_model: str = "gemini-2.5-pro"
+
+    # Google OAuth
+    google_client_id: str = ""
 
     @property
     def gemini_api_key_clean(self) -> str:
@@ -51,3 +51,9 @@ def get_settings() -> Settings:
 
 
 settings = get_settings()
+
+# Validación al arrancar
+import logging as _logging
+_log = _logging.getLogger(__name__)
+_log.info(f"RESEND_API_KEY loaded: {'✅ YES' if settings.resend_api_key else '❌ MISSING'}")
+_log.info(f"EMAIL_FROM: {settings.email_from}")

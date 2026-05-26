@@ -1,0 +1,221 @@
+<!-- Mobile top bar -->
+<div class="mobile-topbar">
+  <a class="mobile-back-btn" routerLink="/dashboard"><mat-icon>arrow_back</mat-icon></a>
+  <span class="mobile-topbar-title">Monte Carlo</span>
+</div>
+
+<div class="mc-page">
+
+  <!-- ── Header ──────────────────────────────────────────────────────────────── -->
+  <header class="mc-header">
+    <div class="mc-header__left">
+      <a class="back-btn" routerLink="/dashboard"><mat-icon>arrow_back</mat-icon></a>
+      <div>
+        <p class="eyebrow">Caracas Portafolio · Análisis</p>
+        <h1>Simulación Monte Carlo <span class="badge-mc">BETA</span></h1>
+      </div>
+    </div>
+  </header>
+
+  <!-- Explainer -->
+  <div class="explainer">
+    <mat-icon>functions</mat-icon>
+    <div>
+      <strong>¿Qué es Monte Carlo?</strong>
+      Proyecta miles de posibles futuros de tu portafolio usando los retornos históricos reales de tus acciones.
+      Muestra el rango probable de valores según distintos percentiles.
+      <span class="explainer-warn">No predice el futuro. Basado en datos pasados de la BVC.</span>
+    </div>
+  </div>
+
+  <!-- ── Live prices banner ───────────────────────────────────────────────────── -->
+  @if (livePortfolioChanged && !loading) {
+    <div class="live-banner">
+      <mat-icon>sync</mat-icon>
+      <span>Precios en tiempo real actualizados — los resultados pueden diferir del punto de partida inicial.</span>
+      <button class="btn-resim" (click)="rerunWithLiveData()">Recalcular ahora</button>
+    </div>
+  }
+
+  <!-- ── Controls ────────────────────────────────────────────────────────────── -->
+  <div class="controls-bar">
+    <div class="ctrl-group">
+      <label>Horizonte temporal</label>
+      <div class="pill-group">
+        @for (h of horizonOptions; track h.value) {
+          <button class="pill" [class.active]="horizon === h.value" (click)="horizon = h.value">{{ h.label }}</button>
+        }
+      </div>
+    </div>
+    <div class="ctrl-group">
+      <label>Simulaciones</label>
+      <div class="pill-group">
+        @for (s of simOptions; track s.value) {
+          <button class="pill" [class.active]="simulations === s.value" (click)="simulations = s.value">{{ s.label }}</button>
+        }
+      </div>
+    </div>
+    <div class="ctrl-group">
+      <label>Aporte mensual (DCA)</label>
+      <div class="dca-input-wrap">
+        <span class="dca-currency">$</span>
+        <input
+          class="dca-input"
+          type="number"
+          min="0"
+          step="100"
+          [(ngModel)]="dcaMonthly"
+          placeholder="0"
+        />
+        <span class="dca-hint">USD / mes</span>
+      </div>
+    </div>
+    <button class="btn-run" (click)="runSimulation()" [disabled]="loading">
+      @if (loading) {
+        <mat-spinner diameter="18" strokeWidth="2"></mat-spinner>
+      } @else {
+        <mat-icon>play_arrow</mat-icon>
+      }
+      Simular
+    </button>
+  </div>
+
+  <!-- ── Loading ─────────────────────────────────────────────────────────────── -->
+  @if (loading) {
+    <div class="mc-loading">
+      <mat-spinner diameter="48" strokeWidth="3"></mat-spinner>
+      <p>Ejecutando {{ simulations }} simulaciones para {{ horizonLabel() }}…</p>
+      <span class="loading-sub">Calculando retornos históricos de tus acciones</span>
+    </div>
+  }
+
+  <!-- ── Error ───────────────────────────────────────────────────────────────── -->
+  @if (!loading && errorMsg) {
+    <div class="mc-error">
+      <mat-icon>warning_amber</mat-icon>
+      <div class="mc-error__body">
+        <p>{{ errorMsg }}</p>
+        @if (errorCode === 'no_open_positions' || errorCode === 'no_portfolio') {
+          <span class="mc-error__hint">
+            Ve a <a routerLink="/transactions/new">Transacciones</a> y registra al menos una compra para poder simular tu portafolio.
+          </span>
+        } @else if (errorCode === 'no_price_data') {
+          <span class="mc-error__hint">
+            Necesitamos datos de precios históricos de la BVC para al menos una de tus acciones.
+          </span>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ── Results ─────────────────────────────────────────────────────────────── -->
+  @if (!loading && result) {
+
+    <!-- DCA info banner -->
+    @if (result.dca_monthly_usd > 0) {
+      <div class="dca-banner">
+        <mat-icon>trending_up</mat-icon>
+        <div>
+          <strong>Modo DCA activo</strong> — Aportando
+          <strong>{{ formatUsd(result.dca_monthly_usd) }}/mes</strong> cada 21 días hábiles.
+          Capital total aportado al final del horizonte:
+          <strong>{{ formatUsd(result.total_contributed_usd) }}</strong>
+          ({{ formatUsd(result.total_contributed_usd - result.initial_value_usd) }} de aportes nuevos).
+          La línea amarilla del gráfico muestra el capital acumulado sin rendimiento.
+        </div>
+      </div>
+    }
+
+    <!-- Summary cards -->
+    <div class="summary-cards">
+      <div class="sum-card sum-card--init">
+        <span class="sum-label">Valor inicial</span>
+        <span class="sum-value">{{ formatUsd(result.initial_value_usd) }}</span>
+        <span class="sum-sub">
+          {{ result.dca_monthly_usd > 0 ? 'Capital inicial · +' + formatUsd(result.dca_monthly_usd) + '/mes' : 'Tu portafolio hoy · sin aportes' }}
+        </span>
+      </div>
+      <div class="sum-card sum-card--p5">
+        <span class="sum-label">P5 — Escenario pesimista</span>
+        <span class="sum-value dn">{{ formatUsd(finalP5) }}</span>
+        <span class="sum-sub">{{ formatPct((finalP5 - result.initial_value_usd) / result.initial_value_usd * 100) }} en {{ horizonLabel() }}</span>
+      </div>
+      <div class="sum-card sum-card--p50">
+        <span class="sum-label">P50 — Mediana</span>
+        <span class="sum-value" [class.up]="medianReturn >= 0" [class.dn]="medianReturn < 0">
+          {{ formatUsd(finalMedian) }}
+        </span>
+        <span class="sum-sub">{{ formatPct(medianReturn) }} en {{ horizonLabel() }}</span>
+      </div>
+      <div class="sum-card sum-card--p95">
+        <span class="sum-label">P95 — Escenario optimista</span>
+        <span class="sum-value up">{{ formatUsd(finalP95) }}</span>
+        <span class="sum-sub">{{ formatPct((finalP95 - result.initial_value_usd) / result.initial_value_usd * 100) }} en {{ horizonLabel() }}</span>
+      </div>
+    </div>
+
+    <!-- Chart -->
+    <div class="chart-card">
+      <div class="chart-header">
+        <h2>Proyección de valor del portafolio</h2>
+        <div class="chart-meta">
+          <span>{{ result.simulations }} simulaciones</span>
+          <span>·</span>
+          <span>{{ result.horizon_days }} días hábiles</span>
+          <span>·</span>
+          <span>BCV: Bs {{ result.bcv_rate.toFixed(2) }}</span>
+          @if (result.bcv_annual_deval_pct != null) {
+            <span>·</span>
+            <span class="deval-note" title="Los retornos se calculan en USD real, descontando la devaluación histórica del bolívar">
+              📉 Devaluación est. {{ result.bcv_annual_deval_pct!.toFixed(0) }}%/año · USD real
+            </span>
+          }
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <canvas #mcChart></canvas>
+      </div>
+    </div>
+
+    <!-- Stock composition -->
+    <div class="stocks-card">
+      <h2>Composición del portafolio simulado</h2>
+      <div class="stocks-grid">
+        @for (s of result.stocks; track s.symbol) {
+          <div class="stock-item">
+            <div class="stock-item__head">
+              <span class="stock-sym">{{ s.symbol }}</span>
+              <span class="stock-weight">{{ s.weight_pct.toFixed(1) }}%</span>
+            </div>
+            <div class="weight-bar">
+              <div class="weight-fill" [style.width.%]="s.weight_pct"></div>
+            </div>
+            <div class="stock-params">
+              <span class="param">
+                <span class="param-label">µ diario</span>
+                <span class="param-val" [class.up]="s.mu_daily >= 0" [class.dn]="s.mu_daily < 0">
+                  {{ s.mu_daily >= 0 ? '+' : '' }}{{ (s.mu_daily * 100).toFixed(3) }}%
+                </span>
+              </span>
+              <span class="param">
+                <span class="param-label">σ diario</span>
+                <span class="param-val">{{ (s.sigma_daily * 100).toFixed(3) }}%</span>
+              </span>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Disclaimer -->
+    <div class="legal-note">
+      <mat-icon>gavel</mat-icon>
+      <p>
+        Esta simulación es puramente educativa. Los retornos pasados no garantizan resultados futuros.
+        La Bolsa de Valores de Caracas es un mercado emergente con alta volatilidad.
+        Consulta con un asesor financiero antes de tomar decisiones de inversión.
+      </p>
+    </div>
+  }
+
+</div>

@@ -183,6 +183,38 @@ async def subscribe_push(
     return {"status": "subscribed"}
 
 
+@router.post("/push/test")
+async def test_push_notification(
+    user_id: UUID = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db)
+):
+    """Envía una notificación push de prueba al usuario."""
+    from app.services.push_service import send_push_notification
+    result = await db.execute(
+        select(PushSubscription).where(PushSubscription.user_id == user_id)
+    )
+    subs = result.scalars().all()
+    if not subs:
+        raise HTTPException(status_code=404, detail="No tienes suscripciones push registradas. Activa las notificaciones primero.")
+
+    sent = 0
+    for sub in subs:
+        ok = await send_push_notification(
+            endpoint=sub.endpoint,
+            p256dh=sub.p256dh,
+            auth=sub.auth_key,
+            title="🔔 Test de notificación",
+            body="¡Las notificaciones push funcionan correctamente en Caracas Portafolio!",
+            url="/goals"
+        )
+        if ok:
+            sent += 1
+
+    if sent == 0:
+        raise HTTPException(status_code=500, detail="No se pudo enviar la notificación. La suscripción puede estar expirada — reactiva las notificaciones.")
+    return {"status": "sent", "count": sent}
+
+
 @router.get("/push/vapid-public-key")
 async def get_vapid_public_key():
     from app.config import settings

@@ -5,7 +5,7 @@
   <title>Caracas Portafolio — Gestión de Inversiones en la Bolsa de Valores de Caracas BVC</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#4c62ff">
+  <meta name="theme-color" content="#0f1729">
   <meta name="description" content="Caracas Portafolio: plataforma profesional para gestionar tu portafolio de acciones en la Bolsa de Valores de Caracas (BVC). Análisis técnico con IA, gráficos en tiempo real, historial de transacciones y perfil de inversión personalizado.">
   <meta name="keywords" content="BVC, Bolsa de Valores de Caracas, acciones Venezuela, portafolio inversión, análisis técnico BVC, comprar acciones Venezuela, Caracas Portafolio">
   <meta name="author" content="Caracas Portafolio">
@@ -22,10 +22,35 @@
   <link rel="manifest" href="manifest.webmanifest">
 </head>
 <body class="mat-typography">
+  <!-- Bootstrap loading screen — hidden once Angular mounts app-root -->
+  <div id="app-boot-loader" style="
+    position:fixed;inset:0;background:#080d18;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:20px;z-index:9999;transition:opacity .4s ease;
+  ">
+    <div style="display:flex;align-items:center;gap:10px;font-family:'Space Grotesk',sans-serif;font-size:1.3rem;font-weight:700;color:#e8eaf6;">
+      <span style="font-size:1.8rem">📊</span>
+      Caracas <span style="color:#00e5c3">Portafolio</span>
+    </div>
+    <div style="width:36px;height:36px;border:3px solid rgba(255,255,255,0.1);border-top-color:#4c62ff;border-radius:50%;animation:cp-spin .8s linear infinite;"></div>
+    <style>@keyframes cp-spin{to{transform:rotate(360deg)}}</style>
+  </div>
+
   <app-root></app-root>
   <noscript>Please enable JavaScript to continue using this application.</noscript>
   <script>
-    // Unregister any stale service workers to prevent caching issues
+    // Hide boot loader once Angular has mounted (app-root has children)
+    const observer = new MutationObserver(function() {
+      const root = document.querySelector('app-root');
+      if (root && root.children.length > 0) {
+        const loader = document.getElementById('app-boot-loader');
+        if (loader) { loader.style.opacity = '0'; setTimeout(function(){ loader.remove(); }, 450); }
+        observer.disconnect();
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    // Unregister stale service workers
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations().then(function(registrations) {
         registrations.forEach(function(r) { r.unregister(); });

@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -n \"^import\\\\|^} from '\\\\\\\\.\\\\\\\\/\" \"c:/Users/Yoel Abreu/OneDrive/Desktop/CV-Yoel Abreu/Gestion Portafolio/frontend/src/app/graficos/graficos.component.ts\")",
+      "Bash(grep -n \"stocks\\\\s*[:=]\\\\|stocksArray\\\\|\\\\\\\\.stocks \" \"c:/Users/Yoel Abreu/OneDrive/Desktop/CV-Yoel Abreu/Gestion Portafolio/frontend/src/app/libros/libros.component.ts\")",
+      "Bash(grep -n \"TÍTULOS\\\\|titulos\\\\|kpi-card\\\\|class=\\\\\"stocks\\\\\\\\|class=\\\\\"stock-table\" \"c:/Users/Yoel Abreu/OneDrive/Desktop/CV-Yoel Abreu/Gestion Portafolio/frontend/src/app/libros/libros.component.html\")",
+      "Bash(grep -n \"^}\\\\s*$\\\\|^export class\" \"c:/Users/Yoel Abreu/OneDrive/Desktop/CV-Yoel Abreu/Gestion Portafolio/frontend/src/app/dashboard/dashboard.component.ts\")",
+      "Bash(grep -n \"performance_by_stock\\\\|<!-- Heatmap\\\\|class=\\\\\"heatmap\\\\\\\\|app-portfolio\" \"c:/Users/Yoel Abreu/OneDrive/Desktop/CV-Yoel Abreu/Gestion Portafolio/frontend/src/app/dashboard/dashboard.component.html\")",
+      "Bash(grep -n \"<section\\\\|<div class=\\\\\"section\\\\|class=\\\\\"dash-section\\\\\\\\|class=\\\\\"card\\\\\\\\|tab label\" \"c:/Users/Yoel Abreu/OneDrive/Desktop/CV-Yoel Abreu/Gestion Portafolio/frontend/src/app/dashboard/dashboard.component.html\")",
+      "Bash(npm install *)",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('backend/app/api/analysis_extra.py'\\).read\\(\\)\\); ast.parse\\(open\\('backend/app/api/paper_trading.py'\\).read\\(\\)\\); print\\('OK'\\)\")"
+    ]
+  }
+}

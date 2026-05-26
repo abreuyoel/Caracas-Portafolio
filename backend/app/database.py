@@ -58,6 +58,13 @@ async def _add_missing_columns(conn):
         ("user_profiles", "allows_margin_trading", "BOOLEAN DEFAULT FALSE"),
         ("user_profiles", "notification_frequency", "VARCHAR DEFAULT 'daily'"),
         ("chat_sessions", "chat_type", "VARCHAR(20) DEFAULT 'general'"),
+        # Social community columns
+        ("social_profiles", "reputation_points", "INTEGER DEFAULT 0"),
+        ("social_profiles", "level", "VARCHAR(20) DEFAULT 'novato'"),
+        ("social_profiles", "show_in_leaderboard", "BOOLEAN DEFAULT TRUE"),
+        ("social_profiles", "prediction_score", "FLOAT DEFAULT 0.0"),
+        ("social_profiles", "predictions_total", "INTEGER DEFAULT 0"),
+        ("social_profiles", "predictions_correct", "INTEGER DEFAULT 0"),
     ]
     for table, col, definition in new_columns:
         try:

@@ -457,7 +457,7 @@ async def _sync_all_history_bg():
                     recent = recent_res.scalar_one_or_none()
                     if recent and (date_type.today() - recent.price_date).days <= 7:
                         continue  # Ya tiene datos recientes
-                    
+
                     # Llamar al método local que descarga datos, ajusta y guarda de ser necesario.
                     await get_stock_history(symbol=stock.symbol, user_id=None, db=db)
                     synced += 1
@@ -603,7 +603,6 @@ async def sync_all_bvc_history(
     hasta hoy. Corre en background; el progreso/finalización queda en los logs
     del servidor con el prefijo [BVC-BATCH-SYNC].
     """
-    from app.api.stocks import _sync_all_bvc_sessions_bg
     background_tasks.add_task(_sync_all_bvc_sessions_bg)
     return {
         "message": "Sync BVC completo iniciado en background",
@@ -1790,7 +1789,19 @@ async def _fetch_bvc_sessions_for_symbol(sym: str) -> list[dict]:
     logger.debug(f"[BVC-SYNC] {sym}: page0 keys={list(page0.keys()) if isinstance(page0, dict) else None}, rows={len(page0_rows)}")
 
     if page0_rows:
-        total_pages = int(page0.get("pages", 1)) if isinstance(page0, dict) else 1
+        # BVC devuelve la paginación bajo "pagination.pages", no "pages" directo.
+        # Sin este fix solo se procesa la página 0 y se pierden el resto de las velas.
+        if isinstance(page0, dict):
+            pag = page0.get("pagination")
+            if isinstance(pag, dict):
+                total_pages = int(pag.get("pages", 1) or 1)
+            else:
+                total_pages = int(page0.get("pages", 1) or 1)
+            if total_pages < 1:
+                total_pages = 1
+        else:
+            total_pages = 1
+        logger.info(f"[BVC-SYNC] {sym}: page0 trae {len(page0_rows)} filas, total_pages={total_pages}")
         all_raw.extend(page0_rows)
 
         BATCH = 20
